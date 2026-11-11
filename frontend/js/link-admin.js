@@ -3,6 +3,7 @@
 const elements = {
   status: document.querySelector("#link-admin-status"),
   login: document.querySelector("#link-admin-login"),
+  retry: document.querySelector("#link-admin-retry"),
   content: document.querySelector("#link-admin-content"),
   summary: document.querySelector("#link-admin-summary"),
   categoryForm: document.querySelector("#category-form"),
@@ -14,6 +15,8 @@ const elements = {
   linkForm: document.querySelector("#link-form"),
   linkId: document.querySelector("#link-id"),
   linkYear: document.querySelector("#link-year"),
+  yearHelp: document.querySelector("#link-year-help"),
+  selectionWarning: document.querySelector("#link-admin-selection-warning"),
   linkCategory: document.querySelector("#link-category"),
   linkTitle: document.querySelector("#link-title"),
   linkUrl: document.querySelector("#link-url"),
@@ -29,7 +32,10 @@ const elements = {
   searchStatus: document.querySelector("#link-admin-search-status"),
 };
 
-const state = { csrfToken: "", categories: [], links: [], years: [], search: "" };
+const state = {
+  csrfToken: "", categories: [], links: [], years: [], search: "", requestId: 0,
+  mutationEnabled: false, missingSelections: new Set(),
+};
 
 function matchesSearch(values) {
   if (!state.search) return true;
@@ -73,7 +79,11 @@ async function requestJson(url, options = {}) {
   } catch {
     if (response.ok) throw new Error("Respons server tidak valid.");
   }
-  if (!response.ok) throw new Error(result.error || `Permintaan gagal (${response.status}).`);
+  if (!response.ok) {
+    const error = new Error(result.error || `Permintaan gagal (${response.status}).`);
+    error.status = response.status;
+    throw error;
+  }
   return result;
 }
 
@@ -82,29 +92,69 @@ function showStatus(message, isError = false) {
   elements.status.classList.toggle("is-error", isError);
 }
 
+function setMutationEnabled(enabled) {
+  state.mutationEnabled = enabled;
+  document.querySelectorAll(
+    "#category-form button[type=submit], #link-form button[type=submit], #link-admin-directory button",
+  ).forEach((button) => { button.disabled = !enabled; });
+}
+
+function showError(error, prefix = "", disableActions = false) {
+  if (disableActions || error.status === 401) setMutationEnabled(false);
+  if (error.status === 401) {
+    elements.login.hidden = false;
+    elements.retry.hidden = false;
+    showStatus(`${prefix}Sesi admin berakhir. Silakan login kembali.`, true);
+    return;
+  }
+  elements.retry.hidden = false;
+  showStatus(`${prefix}${error.message}`, true);
+}
+
+function updateSelectionWarning() {
+  const missing = [...state.missingSelections];
+  elements.selectionWarning.hidden = missing.length === 0;
+  elements.selectionWarning.textContent = missing.length
+    ? `Pilihan ${missing.join(", ")} tidak lagi tersedia; pilih kembali.`
+    : "";
+}
+
 function resetCategoryForm() {
   elements.categoryForm.reset();
+  elements.categoryParent.setCustomValidity("");
   elements.categoryId.value = "";
   elements.categoryCancel.hidden = true;
+  state.missingSelections.delete("topik utama");
+  updateSelectionWarning();
 }
 
 function resetLinkForm() {
   elements.linkForm.reset();
   elements.linkId.value = "";
   elements.linkCancel.hidden = true;
+  state.missingSelections.delete("topik rincian");
+  state.missingSelections.delete("tahun");
+  updateSelectionWarning();
 }
 
 function renderCategories() {
+  const selectedParent = elements.categoryParent.value;
+  const selectedCategory = elements.linkCategory.value;
+  const selectedYear = elements.linkYear.value;
   const roots = state.categories.filter((category) => category.parent_id === null);
   elements.categoryParent.replaceChildren(new Option("Topik utama", ""));
   for (const root of roots) {
-    elements.categoryParent.add(new Option(root.name, String(root.id)));
+    const label = root.is_active ? root.name : `${root.name} (nonaktif)`;
+    elements.categoryParent.add(new Option(label, String(root.id)));
   }
   elements.linkCategory.replaceChildren(new Option("Pilih topik rincian", ""));
   for (const category of state.categories.filter((item) => item.parent_id !== null)) {
     const parent = state.categories.find((item) => item.id === category.parent_id);
+    const parentName = parent?.name || "Topik";
+    const parentLabel = parent?.is_active ? parentName : `${parentName} (nonaktif)`;
+    const categoryLabel = category.is_active ? category.name : `${category.name} (nonaktif)`;
     elements.linkCategory.add(
-      new Option(`${parent?.name || "Topik"} / ${category.name}`, String(category.id)),
+      new Option(`${parentLabel} / ${categoryLabel}`, String(category.id)),
     );
   }
   elements.linkYear.replaceChildren(
@@ -113,7 +163,23 @@ function renderCategories() {
   for (const year of state.years) {
     elements.linkYear.add(new Option(String(year), String(year)));
   }
+  elements.categoryParent.value = selectedParent;
+  elements.linkCategory.value = selectedCategory;
+  elements.linkYear.value = selectedYear;
+  const missingParent = Boolean(selectedParent && elements.categoryParent.value !== selectedParent);
+  if (missingParent) {
+    elements.categoryParent.setCustomValidity("Topik utama tidak lagi tersedia; pilih kembali.");
+    state.missingSelections.add("topik utama");
+  }
   elements.linkYear.disabled = state.years.length === 0;
+  elements.yearHelp.hidden = state.years.length !== 0;
+  if (selectedCategory && elements.linkCategory.value !== selectedCategory) {
+    state.missingSelections.add("topik rincian");
+  }
+  if (selectedYear && elements.linkYear.value !== selectedYear) {
+    state.missingSelections.add("tahun");
+  }
+  updateSelectionWarning();
 }
 
 function renderSummary() {
@@ -150,6 +216,7 @@ function actionButton(label, callback, inSummary = false) {
   const button = document.createElement("button");
   button.className = "button button-secondary";
   button.type = "button";
+  button.disabled = !state.mutationEnabled;
   button.textContent = label;
   button.addEventListener("click", async (event) => {
     if (inSummary) {
@@ -162,6 +229,9 @@ function actionButton(label, callback, inSummary = false) {
 }
 
 function editCategory(category) {
+  elements.categoryParent.setCustomValidity("");
+  state.missingSelections.delete("topik utama");
+  updateSelectionWarning();
   elements.categoryId.value = String(category.id);
   elements.categoryName.value = category.name;
   elements.categoryParent.value = category.parent_id ? String(category.parent_id) : "";
@@ -170,25 +240,115 @@ function editCategory(category) {
   elements.categoryName.focus();
 }
 
+function confirmDeletion(title, description, blocked = false) {
+  return new Promise((resolve) => {
+    const dialog = document.createElement("dialog");
+    dialog.className = "export-choice-dialog link-delete-dialog";
+    dialog.setAttribute("aria-labelledby", "link-delete-title");
+    dialog.setAttribute("aria-describedby", "link-delete-description");
+
+    const icon = document.createElement("div");
+    icon.className = "link-delete-icon";
+    icon.setAttribute("aria-hidden", "true");
+    icon.textContent = "!";
+    const heading = document.createElement("h2");
+    heading.id = "link-delete-title";
+    heading.textContent = title;
+    const message = document.createElement("p");
+    message.id = "link-delete-description";
+    message.textContent = description;
+    const actions = document.createElement("div");
+    actions.className = "export-choice-actions";
+    const finish = (confirmed) => {
+      dialog.close();
+      dialog.remove();
+      resolve(confirmed);
+    };
+    const cancel = document.createElement("button");
+    cancel.type = "button";
+    cancel.className = "button button-secondary";
+    cancel.textContent = blocked ? "Tutup" : "Batal";
+    cancel.autofocus = true;
+    cancel.addEventListener("click", () => finish(false));
+    actions.append(cancel);
+    if (!blocked) {
+      const confirm = document.createElement("button");
+      confirm.type = "button";
+      confirm.className = "button link-delete-confirm";
+      confirm.textContent = "Ya, hapus";
+      confirm.addEventListener("click", () => finish(true));
+      actions.append(confirm);
+    }
+    dialog.append(icon, heading, message, actions);
+    document.body.append(dialog);
+    dialog.addEventListener("cancel", (event) => {
+      event.preventDefault();
+      finish(false);
+    });
+    dialog.showModal();
+  });
+}
+
 async function deleteCategory(category) {
-  if (!window.confirm(`Hapus topik “${category.name}”?`)) return;
   try {
-    await requestJson(`/api/admin/link-categories/${category.id}`, { method: "DELETE" });
-    await loadData();
-    showStatus("Topik berhasil dihapus.");
+    if (!await loadData()) return;
   } catch (error) {
-    showStatus(error.message, true);
+    showError(error, "Data terbaru belum berhasil dimuat. ", true);
+    return;
+  }
+  const currentCategory = state.categories.find((item) => item.id === category.id);
+  if (!currentCategory) {
+    showStatus("Topik sudah tidak tersedia. Daftar telah diperbarui.", true);
+    return;
+  }
+  const children = state.categories.filter((item) => item.parent_id === currentCategory.id);
+  const categoryIds = new Set([currentCategory.id, ...children.map((item) => item.id)]);
+  const links = state.links.filter((item) => categoryIds.has(item.category_id));
+  const hasOtherAdminLinks = links.some((item) => !item.can_edit);
+  const type = currentCategory.parent_id === null ? "topik utama" : "topik rincian";
+  const description = hasOtherAdminLinks
+    ? `“${currentCategory.name}” berisi tautan milik admin lain. Tautan tersebut harus dihapus oleh pembuatnya terlebih dahulu.`
+    : `Hapus ${type} “${currentCategory.name}”? Seluruh topik rincian dan tautan di dalamnya juga akan dihapus permanen, termasuk yang tidak terlihat dalam pencarian. Data terakhir: ${children.length} topik rincian dan ${links.length} tautan.`;
+  if (!await confirmDeletion(
+    hasOtherAdminLinks ? "Topik belum bisa dihapus" : "Hapus topik?",
+    description,
+    hasOtherAdminLinks,
+  )) return;
+  try {
+    await requestJson(`/api/admin/link-categories/${currentCategory.id}`, {
+      method: "DELETE",
+      body: JSON.stringify({ confirm_contents: true }),
+    });
+    await refreshAfterMutation("Topik berhasil dihapus.");
+  } catch (error) {
+    showError(error);
   }
 }
 
 function categoryActions(category) {
   const actions = document.createElement("span");
   actions.className = "link-admin-tree-actions";
+  const statusLabel = category.is_active ? "Nonaktifkan" : "Aktifkan";
+  const statusButton = actionButton(statusLabel, () => changeCategoryStatus(category), true);
+  statusButton.setAttribute("aria-label", `${statusLabel} topik ${category.name}`);
   actions.append(
+    statusButton,
     actionButton("Edit", () => editCategory(category), true),
     actionButton("Hapus", () => deleteCategory(category), true),
   );
   return actions;
+}
+
+async function changeCategoryStatus(category) {
+  try {
+    await requestJson(`/api/admin/link-categories/${category.id}/status`, {
+      method: "PATCH",
+      body: JSON.stringify({ is_active: !category.is_active }),
+    });
+    await refreshAfterMutation("Status topik diperbarui.");
+  } catch (error) {
+    showError(error);
+  }
 }
 
 async function changeLinkStatus(link) {
@@ -197,14 +357,16 @@ async function changeLinkStatus(link) {
       method: "PATCH",
       body: JSON.stringify({ is_active: !link.is_active }),
     });
-    await loadData();
-    showStatus("Status tautan diperbarui.");
+    await refreshAfterMutation("Status tautan diperbarui.");
   } catch (error) {
-    showStatus(error.message, true);
+    showError(error);
   }
 }
 
 function editLink(link) {
+  state.missingSelections.delete("topik rincian");
+  state.missingSelections.delete("tahun");
+  updateSelectionWarning();
   elements.linkId.value = String(link.id);
   elements.linkYear.value = link.year === null || link.year === undefined
     ? ""
@@ -221,13 +383,15 @@ function editLink(link) {
 }
 
 async function deleteLink(link) {
-  if (!window.confirm(`Hapus tautan “${link.title}”?`)) return;
+  if (!await confirmDeletion(
+    "Hapus tautan?",
+    `Tautan “${link.title}” akan dihapus permanen dan tidak dapat dikembalikan.`,
+  )) return;
   try {
     await requestJson(`/api/admin/links/${link.id}`, { method: "DELETE" });
-    await loadData();
-    showStatus("Tautan berhasil dihapus.");
+    await refreshAfterMutation("Tautan berhasil dihapus.");
   } catch (error) {
-    showStatus(error.message, true);
+    showError(error);
   }
 }
 
@@ -265,7 +429,7 @@ function renderDirectory() {
     rootName.append(document.createTextNode(root.name));
     const rootCount = document.createElement("small");
     rootCount.className = "link-admin-tree-count";
-    rootCount.textContent = `${visibleChildren.length} topik rincian`;
+    rootCount.textContent = `${root.is_active ? "Aktif" : "Nonaktif"} · ${visibleChildren.length} topik rincian`;
     rootHeading.append(rootName, rootCount, categoryActions(root));
     rootFolder.append(rootHeading);
 
@@ -289,7 +453,10 @@ function renderDirectory() {
       detailName.append(document.createTextNode(category.name));
       const detailCount = document.createElement("small");
       detailCount.className = "link-admin-tree-count";
-      detailCount.textContent = `${categoryLinks.length} tautan`;
+      const visibility = category.is_active && !root.is_active
+        ? "Aktif (topik utama nonaktif)"
+        : category.is_active ? "Aktif" : "Nonaktif";
+      detailCount.textContent = `${visibility} · ${categoryLinks.length} tautan`;
       detailHeading.append(detailName, detailCount, categoryActions(category));
       detailFolder.append(detailHeading);
 
@@ -313,7 +480,9 @@ function renderDirectory() {
         const meta = document.createElement("p");
         meta.textContent = [
           `Tahun ${link.year || "belum ditentukan"}`,
-          link.is_active ? "Aktif" : "Nonaktif",
+          link.is_active && (!root.is_active || !category.is_active)
+            ? "Aktif (topik nonaktif)"
+            : link.is_active ? "Aktif" : "Nonaktif",
           link.can_edit ? "Dibuat oleh Anda" : "Dibuat admin lain",
         ].join(" · ");
         const timestamps = document.createElement("small");
@@ -355,11 +524,24 @@ function renderDirectory() {
 }
 
 async function loadData() {
-  const [categoryResult, linkResult, yearResult] = await Promise.all([
-    requestJson("/api/admin/link-categories"),
-    requestJson("/api/admin/links"),
-    requestJson("/api/years"),
-  ]);
+  const requestId = ++state.requestId;
+  let results;
+  try {
+    results = await Promise.all([
+      requestJson("/api/admin/link-categories"),
+      requestJson("/api/admin/links"),
+      requestJson("/api/years"),
+    ]);
+  } catch (error) {
+    if (requestId !== state.requestId) return false;
+    throw error;
+  }
+  if (requestId !== state.requestId) return false;
+  const [categoryResult, linkResult, yearResult] = results;
+  if (!Array.isArray(categoryResult.categories)
+      || categoryResult.categories.some((category) => typeof category.is_active !== "boolean")) {
+    throw new Error("Status topik tidak tersedia. Perbarui backend dan mulai ulang layanan.");
+  }
   state.categories = categoryResult.categories;
   state.links = linkResult.links;
   state.years = yearResult.years;
@@ -369,6 +551,18 @@ async function loadData() {
   elements.searchStatus.textContent = state.search
     ? `${visible.rootCount} topik utama, ${visible.detailCount} topik rincian, dan ${visible.linkCount} tautan cocok.`
     : `${visible.rootCount} topik utama, ${visible.detailCount} topik rincian, dan ${visible.linkCount} tautan tersedia.`;
+  elements.retry.hidden = true;
+  elements.content.hidden = false;
+  setMutationEnabled(true);
+  return true;
+}
+
+async function refreshAfterMutation(message) {
+  try {
+    if (await loadData()) showStatus(message);
+  } catch (error) {
+    showError(error, `${message} Data belum berhasil dimuat ulang. `, true);
+  }
 }
 
 elements.categoryForm.addEventListener("submit", async (event) => {
@@ -386,15 +580,18 @@ elements.categoryForm.addEventListener("submit", async (event) => {
       { method: id ? "PATCH" : "POST", body: JSON.stringify(body) },
     );
     resetCategoryForm();
-    await loadData();
-    showStatus("Topik berhasil disimpan.");
+    await refreshAfterMutation("Topik berhasil disimpan.");
   } catch (error) {
-    showStatus(error.message, true);
+    showError(error);
   }
 });
 
 elements.linkForm.addEventListener("submit", async (event) => {
   event.preventDefault();
+  if (!elements.linkYear.value) {
+    showStatus("Pilih tahun yang tersedia sebelum menyimpan tautan.", true);
+    return;
+  }
   const id = elements.linkId.value;
   const isEditing = Boolean(id);
   const body = {
@@ -413,17 +610,30 @@ elements.linkForm.addEventListener("submit", async (event) => {
       { method: id ? "PATCH" : "POST", body: JSON.stringify(body) },
     );
     resetLinkForm();
-    await loadData();
-    showStatus(isEditing
+    await refreshAfterMutation(isEditing
       ? "Tautan berhasil diperbarui."
       : "Tautan berhasil disimpan. Tautan baru berstatus nonaktif.");
   } catch (error) {
-    showStatus(error.message, true);
+    showError(error);
   }
 });
 
 elements.categoryCancel.addEventListener("click", resetCategoryForm);
 elements.linkCancel.addEventListener("click", resetLinkForm);
+elements.categoryParent.addEventListener("change", () => {
+  elements.categoryParent.setCustomValidity("");
+  state.missingSelections.delete("topik utama");
+  updateSelectionWarning();
+});
+elements.linkCategory.addEventListener("change", () => {
+  state.missingSelections.delete("topik rincian");
+  updateSelectionWarning();
+});
+elements.linkYear.addEventListener("change", () => {
+  state.missingSelections.delete("tahun");
+  updateSelectionWarning();
+});
+elements.retry.addEventListener("click", () => { void initialize(); });
 elements.searchForm.addEventListener("submit", (event) => {
   event.preventDefault();
   state.search = elements.search.value.trim();
@@ -444,15 +654,18 @@ async function initialize() {
     const session = await requestJson("/api/auth/session");
     state.csrfToken = session.csrf_token;
     if (!session.authenticated) {
+      setMutationEnabled(false);
       elements.login.hidden = false;
+      elements.retry.hidden = false;
       showStatus("Sesi admin belum aktif.");
       return;
     }
-    elements.content.hidden = false;
-    await loadData();
-    showStatus(`Login sebagai ${session.username}.`);
+    if (await loadData()) {
+      elements.login.hidden = true;
+      showStatus(`Login sebagai ${session.username}.`);
+    }
   } catch (error) {
-    showStatus(error.message, true);
+    showError(error, "", true);
   }
 }
 

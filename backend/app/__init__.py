@@ -41,7 +41,8 @@ def create_app(test_config: dict | None = None) -> Flask:
         ),
         ADMIN_UPLOAD_DIR=PROJECT_DIR / "data" / "admin_uploads",
         REALIZATION_UPLOAD_DIR=PROJECT_DIR / "data" / "realization_uploads",
-        SECRET_KEY=os.environ.get("APBD_SECRET_KEY") or secrets.token_hex(32),
+        APBD_ENV=os.environ.get("APBD_ENV", "development").strip().lower(),
+        SECRET_KEY=os.environ.get("APBD_SECRET_KEY"),
         SESSION_COOKIE_HTTPONLY=True,
         SESSION_COOKIE_SAMESITE="Lax",
         SESSION_COOKIE_SECURE=os.environ.get("APBD_COOKIE_SECURE", "").lower()
@@ -53,6 +54,14 @@ def create_app(test_config: dict | None = None) -> Flask:
     )
     if test_config:
         app.config.update(test_config)
+    secret_key = app.config["SECRET_KEY"]
+    if not secret_key or (isinstance(secret_key, str) and not secret_key.strip()):
+        if app.config["APBD_ENV"] == "production":
+            raise RuntimeError("APBD_SECRET_KEY wajib diatur pada mode produksi.")
+        app.config["SECRET_KEY"] = secrets.token_hex(32)
+        app.logger.warning(
+            "APBD_SECRET_KEY belum diatur; sesi tidak bertahan setelah aplikasi dimulai ulang."
+        )
     if app.config["PERFORMANCE_LOGGING"]:
         app.logger.setLevel("INFO")
 
@@ -159,6 +168,8 @@ def create_app(test_config: dict | None = None) -> Flask:
             }
         ):
             response.headers["Cache-Control"] = "public, max-age=30"
+        if request.path.startswith(("/api/auth/", "/api/admin/")):
+            response.headers["Cache-Control"] = "no-store"
         return response
     policy_description = (
         "Admin dapat mengelola jenis tagging dan penandaan subkegiatan atau "

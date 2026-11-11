@@ -161,23 +161,31 @@ def get_public_link_directory():
     if not 1 <= limit <= 100 or offset < 0:
         raise APIError(400, "Limit harus 1–100 dan offset tidak boleh negatif.")
     with get_session() as session:
+        summary_parent = aliased(LinkCategory)
         summary = {
             "main_topics": session.scalar(
                 select(func.count())
                 .select_from(LinkCategory)
-                .where(LinkCategory.parent_id.is_(None))
+                .where(LinkCategory.parent_id.is_(None), LinkCategory.is_active.is_(True))
             )
             or 0,
             "detail_topics": session.scalar(
                 select(func.count())
                 .select_from(LinkCategory)
-                .where(LinkCategory.parent_id.is_not(None))
+                .join(summary_parent, LinkCategory.parent_id == summary_parent.id)
+                .where(LinkCategory.is_active.is_(True), summary_parent.is_active.is_(True))
             )
             or 0,
             "links": session.scalar(
                 select(func.count())
                 .select_from(DirectoryLink)
-                .where(DirectoryLink.is_active.is_(True))
+                .join(LinkCategory, DirectoryLink.category_id == LinkCategory.id)
+                .outerjoin(summary_parent, LinkCategory.parent_id == summary_parent.id)
+                .where(
+                    DirectoryLink.is_active.is_(True),
+                    LinkCategory.is_active.is_(True),
+                    or_(LinkCategory.parent_id.is_(None), summary_parent.is_active.is_(True)),
+                )
             )
             or 0,
         }
@@ -185,7 +193,13 @@ def get_public_link_directory():
             if not category_value.isdecimal():
                 raise APIError(400, "Parameter category_id tidak valid.")
             category = session.get(LinkCategory, int(category_value))
-            if category is None or category.parent_id is None:
+            if (
+                category is None
+                or category.parent_id is None
+                or not category.is_active
+                or category.parent is None
+                or not category.parent.is_active
+            ):
                 raise APIError(404, "Topik rincian tidak ditemukan.")
             statement = select(DirectoryLink).where(
                 DirectoryLink.category_id == category.id,
@@ -242,13 +256,17 @@ def get_public_link_directory():
                 select(DirectoryLink, LinkCategory, root_category)
                 .join(LinkCategory, DirectoryLink.category_id == LinkCategory.id)
                 .outerjoin(root_category, root_category.id == LinkCategory.parent_id)
-                .where(DirectoryLink.is_active.is_(True))
+                .where(
+                    DirectoryLink.is_active.is_(True),
+                    LinkCategory.is_active.is_(True),
+                    or_(LinkCategory.parent_id.is_(None), root_category.is_active.is_(True)),
+                )
             )
             if topic_value:
                 if not topic_value.isdecimal():
                     raise APIError(400, "Parameter topic_id tidak valid.")
                 topic = session.get(LinkCategory, int(topic_value))
-                if topic is None or topic.parent_id is not None:
+                if topic is None or topic.parent_id is not None or not topic.is_active:
                     raise APIError(404, "Topik utama tidak ditemukan.")
                 statement = statement.where(
                     or_(
@@ -313,19 +331,22 @@ def get_public_link_directory():
             if not topic_value.isdecimal():
                 raise APIError(400, "Parameter topic_id tidak valid.")
             topic = session.get(LinkCategory, int(topic_value))
-            if topic is None or topic.parent_id is not None:
+            if topic is None or topic.parent_id is not None or not topic.is_active:
                 raise APIError(404, "Topik utama tidak ditemukan.")
 
+        root_statement = select(LinkCategory).where(
+            LinkCategory.parent_id.is_(None), LinkCategory.is_active.is_(True)
+        )
+        if topic_value:
+            root_statement = root_statement.where(LinkCategory.id == int(topic_value))
         root_categories = session.scalars(
-            select(LinkCategory)
-            .where(LinkCategory.parent_id.is_(None))
-            .order_by(LinkCategory.created_at.desc(), LinkCategory.id.desc())
+            root_statement.order_by(LinkCategory.created_at.desc(), LinkCategory.id.desc())
         ).all()
         root_ids = [category.id for category in root_categories]
         child_categories = (
             session.scalars(
                 select(LinkCategory)
-                .where(LinkCategory.parent_id.in_(root_ids))
+                .where(LinkCategory.parent_id.in_(root_ids), LinkCategory.is_active.is_(True))
                 .order_by(LinkCategory.created_at.desc(), LinkCategory.id.desc())
             ).all()
             if root_ids
@@ -333,7 +354,7 @@ def get_public_link_directory():
         )
         children_by_root: dict[int, list[LinkCategory]] = defaultdict(list)
         for child in child_categories:
-            if len(children_by_root[child.parent_id]) < 5:
+            if topic_value or len(children_by_root[child.parent_id]) < 5:
                 children_by_root[child.parent_id].append(child)
         child_ids = [
             child.id for children in children_by_root.values() for child in children

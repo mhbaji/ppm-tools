@@ -806,48 +806,36 @@ def migrate_feature_schema(database_path: Path) -> None:
 
 
 def migrate_link_directory_schema(database_path: Path) -> None:
-    """Add link-directory fields and infer legacy years from publication dates."""
+    """Add link-directory fields without inferring years for legacy links."""
     if not database_path.exists():
         return
     connection = sqlite3.connect(database_path)
     try:
+        connection.execute("BEGIN IMMEDIATE")
+        category_table_exists = connection.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name='link_categories'"
+        ).fetchone()
+        if category_table_exists is not None:
+            category_columns = {
+                row[1] for row in connection.execute("PRAGMA table_info(link_categories)")
+            }
+            if "is_active" not in category_columns:
+                connection.execute(
+                    "ALTER TABLE link_categories ADD COLUMN is_active BOOLEAN NOT NULL DEFAULT 1"
+                )
         table_exists = connection.execute(
             "SELECT 1 FROM sqlite_master WHERE type='table' AND name='directory_links'"
         ).fetchone()
-        if table_exists is None:
-            return
-        columns = {
-            row[1] for row in connection.execute("PRAGMA table_info(directory_links)")
-        }
-        if "icon" not in columns:
-            connection.execute("ALTER TABLE directory_links ADD COLUMN icon TEXT")
-            connection.commit()
-        if "year_id" not in columns:
-            connection.execute(
-                "ALTER TABLE directory_links ADD COLUMN year_id INTEGER REFERENCES years(id)"
-            )
-            connection.commit()
-        years_table_exists = connection.execute(
-            "SELECT 1 FROM sqlite_master WHERE type='table' AND name='years'"
-        ).fetchone()
-        if years_table_exists is not None and "published_at" in columns:
-            connection.execute(
-                """
-                UPDATE directory_links
-                SET year_id = (
-                    SELECT years.id
-                    FROM years
-                    WHERE years.name = CAST(substr(directory_links.published_at, 1, 4) AS INTEGER)
+        if table_exists is not None:
+            columns = {
+                row[1] for row in connection.execute("PRAGMA table_info(directory_links)")
+            }
+            if "icon" not in columns:
+                connection.execute("ALTER TABLE directory_links ADD COLUMN icon TEXT")
+            if "year_id" not in columns:
+                connection.execute(
+                    "ALTER TABLE directory_links ADD COLUMN year_id INTEGER REFERENCES years(id)"
                 )
-                WHERE year_id IS NULL
-                    AND published_at IS NOT NULL
-                    AND EXISTS (
-                        SELECT 1
-                        FROM years
-                        WHERE years.name = CAST(substr(directory_links.published_at, 1, 4) AS INTEGER)
-                    )
-                """
-            )
-            connection.commit()
+        connection.commit()
     finally:
         connection.close()

@@ -1061,6 +1061,21 @@ td.numeric-cell { font-variant-numeric: tabular-nums; font-weight: 700; }
 .link-admin-panel { margin-bottom: 18px; }
 .link-admin-panel h2 { margin-bottom: 14px; }
 .link-admin-summary { margin-bottom: 18px; }
+.link-delete-dialog p { line-height: 1.6; overflow-wrap: anywhere; }
+.link-delete-icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin-bottom: 14px;
+  border-radius: 50%;
+  background: #fee2e2;
+  color: #b42318;
+  font-size: 24px;
+  font-weight: 800;
+}
+.link-delete-confirm { background: #b42318; color: #fff; }
+.link-delete-confirm:hover:not(:disabled) { background: #8e1c13; }
 .link-admin-search-panel { margin: 18px 0; }
 .link-admin-directory-panel { padding: 18px; }
 .link-admin-directory-panel h2 { margin-bottom: 14px; }

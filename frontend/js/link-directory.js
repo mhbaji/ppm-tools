@@ -218,7 +218,8 @@ async function load() {
         : "Tidak ada tautan yang cocok dengan pencarian.";
     } else {
       elements.pagination.hidden = true;
-      const result = await fetchJson("/api/link-directory");
+      const params = topicId ? `?${new URLSearchParams({ topic_id: topicId })}` : "";
+      const result = await fetchJson(`/api/link-directory${params}`);
       if (requestId !== state.requestId) return;
       renderSummary(result.summary);
       const topics = topicId

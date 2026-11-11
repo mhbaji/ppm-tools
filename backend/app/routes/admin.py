@@ -1820,6 +1820,7 @@ def _link_category_json(category: LinkCategory) -> dict:
         "name": category.name,
         "description": category.description,
         "parent_id": category.parent_id,
+        "is_active": category.is_active,
         "created_at": category.created_at.isoformat(sep=" "),
     }
 
@@ -1893,7 +1894,9 @@ def create_admin_link_category():
     parent_id = body.get("parent_id")
     if not isinstance(description, str) or len(description) > 1000:
         raise APIError(400, "Deskripsi topik maksimal 1000 karakter.")
-    if parent_id is not None and (not isinstance(parent_id, int) or isinstance(parent_id, bool)):
+    if parent_id is not None and (
+        not isinstance(parent_id, int) or isinstance(parent_id, bool) or parent_id <= 0
+    ):
         raise APIError(400, "Topik utama tidak valid.")
     with get_session() as database_session:
         with database_session.begin():
@@ -1929,7 +1932,9 @@ def update_admin_link_category(category_id: int):
     parent_id = body.get("parent_id")
     if not isinstance(description, str) or len(description) > 1000:
         raise APIError(400, "Deskripsi topik maksimal 1000 karakter.")
-    if parent_id is not None and (not isinstance(parent_id, int) or isinstance(parent_id, bool)):
+    if parent_id is not None and (
+        not isinstance(parent_id, int) or isinstance(parent_id, bool) or parent_id <= 0
+    ):
         raise APIError(400, "Topik utama tidak valid.")
     with get_session() as database_session:
         with database_session.begin():
@@ -1944,6 +1949,17 @@ def update_admin_link_category(category_id: int):
                 parent_id and (parent is None or parent.parent_id is not None)
             ) or (children_exist is not None and parent_id is not None):
                 raise APIError(400, "Hierarki topik hanya mendukung dua tingkat.")
+            if item.parent_id is not None and parent_id is None:
+                has_links = database_session.scalar(
+                    select(DirectoryLink.id)
+                    .where(DirectoryLink.category_id == category_id)
+                    .limit(1)
+                )
+                if has_links is not None:
+                    raise APIError(
+                        409,
+                        "Topik rincian yang memiliki tautan tidak dapat dijadikan topik utama.",
+                    )
             duplicate = database_session.scalar(
                 select(LinkCategory.id).where(
                     LinkCategory.parent_id == parent_id,
@@ -1960,22 +1976,59 @@ def update_admin_link_category(category_id: int):
     return jsonify({"updated": True, "category": result})
 
 
-@admin_blueprint.delete("/admin/link-categories/<int:category_id>")
+@admin_blueprint.patch("/admin/link-categories/<int:category_id>/status")
 @admin_required
-def delete_admin_link_category(category_id: int):
+def update_admin_link_category_status(category_id: int):
+    body = request.get_json(silent=True)
+    is_active = body.get("is_active") if isinstance(body, dict) else None
+    if not isinstance(is_active, bool):
+        raise APIError(400, "Status topik harus aktif atau nonaktif.")
     with get_session() as database_session:
         with database_session.begin():
             item = database_session.get(LinkCategory, category_id)
             if item is None:
                 raise APIError(404, "Topik tidak ditemukan.")
+            item.is_active = is_active
+    return jsonify({"updated": True, "id": category_id, "is_active": is_active})
+
+
+@admin_blueprint.delete("/admin/link-categories/<int:category_id>")
+@admin_required
+def delete_admin_link_category(category_id: int):
+    body = request.get_json(silent=True)
+    confirm_contents = isinstance(body, dict) and body.get("confirm_contents") is True
+    with get_session() as database_session:
+        with database_session.begin():
+            # Keep the ownership check and all deletes in one SQLite write transaction.
+            database_session.execute(text("BEGIN IMMEDIATE"))
+            item = database_session.get(LinkCategory, category_id)
+            if item is None:
+                raise APIError(404, "Topik tidak ditemukan.")
+            category_ids = select(LinkCategory.id).where(
+                or_(LinkCategory.id == category_id, LinkCategory.parent_id == category_id)
+            )
             has_children = database_session.scalar(
                 select(LinkCategory.id).where(LinkCategory.parent_id == category_id).limit(1)
             )
             has_links = database_session.scalar(
-                select(DirectoryLink.id).where(DirectoryLink.category_id == category_id).limit(1)
+                select(DirectoryLink.id).where(DirectoryLink.category_id.in_(category_ids)).limit(1)
             )
-            if has_children is not None or has_links is not None:
-                raise APIError(409, "Topik tidak dapat dihapus karena masih memiliki rincian atau tautan.")
+            if (has_children is not None or has_links is not None) and not confirm_contents:
+                raise APIError(409, "Konfirmasi diperlukan untuk menghapus topik beserta isinya.")
+            other_admin_link = database_session.scalar(
+                select(DirectoryLink.id).where(
+                    DirectoryLink.category_id.in_(category_ids),
+                    DirectoryLink.created_by != web_session["admin_user_id"],
+                ).limit(1)
+            )
+            if other_admin_link is not None:
+                raise APIError(403, "Topik tidak dapat dihapus karena berisi tautan milik admin lain.")
+            database_session.execute(
+                delete(DirectoryLink).where(DirectoryLink.category_id.in_(category_ids))
+            )
+            database_session.execute(
+                delete(LinkCategory).where(LinkCategory.parent_id == category_id)
+            )
             database_session.delete(item)
     return jsonify({"deleted": True, "id": category_id})
 
