@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Impor dan pantau realisasi anggaran dan kinerja.">
+    <title>Realisasi Anggaran dan Kinerja | PPM Tools</title>
+    <link rel="stylesheet" href="/css/apbd.css?v=27">
+    <link rel="stylesheet" href="/css/admin.css?v=22">
+    <script src="/js/export-dialog.js?v=1" defer></script>
+    <script src="/js/excel-export.js?v=1" defer></script>
+    <script src="/js/realization.js?v=9" defer></script>
+  </head>
+  <body class="admin-page realisasi-page">
+    <aside class="admin-sidebar">
+      <a class="brand" href="/" aria-label="PPM Tools">
+        <span class="brand-mark" aria-hidden="true">P</span>
+        <span><strong>PPM Tools</strong><small>Panel admin</small></span>
+      </a>
+      <nav class="admin-navigation" aria-label="Navigasi admin">
+        <a href="/admin/dashboard">Dashboard</a>
+        <a href="/admin/sub-kegiatan">Sub Kegiatan</a>
+        <a href="/admin/realisasi" aria-current="page">Realisasi Anggaran dan Kinerja</a>
+        <a href="/admin/tagging-sub-kegiatan">Tagging Sub Kegiatan</a>
+        <a href="/admin/tahapan">Jenis Tagging dan Tahapan</a>
+        <a href="/admin/perangkat-daerah">Perangkat Daerah</a>
+        <a href="/admin/referensi">Data Referensi</a>
+      </nav>
+      <button id="logout-button" class="button button-secondary logout-button" type="button">Keluar</button>
+    </aside>
+    <main class="admin-main">
+      <header class="admin-heading">
+        <div>
+          <p class="eyebrow">PENGELOLAAN DATA</p>
+          <h1>Realisasi Anggaran dan Kinerja</h1>
+          <p id="admin-identity" class="helper-text"></p>
+        </div>
+        <a class="dashboard-public-cta" href="/">
+          <span class="dashboard-public-cta-icon" aria-hidden="true">&gt;</span>
+          <span><strong>Lihat dashboard publik</strong><small>Jelajahi data anggaran APBD dan ringkasannya</small></span>
+        </a>
+      </header>
+
+      <section class="panel realisasi-panel" aria-labelledby="upload-title">
+        <div class="section-heading">
+          <div>
+            <h2 id="upload-title">Upload data realisasi</h2>
+            <p class="helper-text">Pilih file Excel, tahun, dan periode pelaporan.</p>
+          </div>
+        </div>
+        <form id="realisasi-upload-form" class="realisasi-upload-form">
+          <div>
+            <label class="field-label" for="upload-year">Tahun</label>
+            <select id="upload-year" class="select-control" required disabled>
+              <option value="">Memuat...</option>
+            </select>
+          </div>
+          <div>
+            <label class="field-label" for="upload-period">Periode</label>
+            <select id="upload-period" class="select-control" required disabled>
+              <option value="">Memuat...</option>
+            </select>
+          </div>
+          <div class="realisasi-file-field">
+            <label class="field-label" for="upload-file">File Excel (.xlsx)</label>
+            <input id="upload-file" class="text-control" type="file" accept=".xlsx" required>
+          </div>
+          <button id="upload-submit" class="button button-primary" type="submit">Upload</button>
+        </form>
+        <p id="upload-status" class="form-status" role="status" aria-live="polite"></p>
+        <p class="helper-text">
+          Kolom yang didukung termasuk Nama Sub Unit, Kode, Pekerjaan, Indikator, Satuan,
+          Target, Capaian, Persentase Capaian, Anggaran, dan Realisasi. Nama perangkat daerah
+          dapat menggunakan SKPD, Sub Unit, Perangkat Daerah, atau OPD.
+          Baris tanpa Target akan dilewati dengan peringatan; baris tersebut tidak membatalkan impor.
+        </p>
+      </section>
+
+      <section class="panel realisasi-panel" aria-labelledby="uploads-title">
+        <div class="section-heading">
+          <div>
+            <h2 id="uploads-title">File yang diunggah</h2>
+            <p class="helper-text">File sumber dapat diunduh kembali dari riwayat.</p>
+          </div>
+          <div class="realisasi-filter">
+            <label class="field-label" for="uploads-year">Tahun</label>
+            <select id="uploads-year" class="select-control" disabled></select>
+          </div>
+        </div>
+        <p id="uploads-status" class="form-status" role="status" aria-live="polite"></p>
+        <div class="realisasi-table-wrap realisasi-upload-table-wrap">
+          <table class="realisasi-table realisasi-uploads-table">
+            <thead>
+              <tr>
+                <th scope="col">Nama file</th>
+                <th scope="col">Tanggal upload</th>
+                <th scope="col">Tahun</th>
+                <th scope="col">Periode</th>
+                <th scope="col">Baris diimpor</th>
+                <th scope="col">File</th>
+              </tr>
+            </thead>
+            <tbody id="upload-rows">
+              <tr><td colspan="6">Memuat riwayat...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel realisasi-panel" aria-labelledby="data-title">
+        <div class="section-heading realisasi-data-heading">
+          <div>
+            <h2 id="data-title">Data realisasi anggaran dan kinerja</h2>
+            <p id="data-count" class="helper-text">Pilih tahun dan periode.</p>
+          </div>
+          <div class="realisasi-detail-actions">
+            <button id="realisasi-toggle-all" class="button button-secondary" type="button">
+              Buka semua rincian
+            </button>
+            <label class="hierarchy-level-filter">
+              Tampilkan
+              <select id="realisasi-level-filter" class="select-control compact-select">
+                <option value="skpd">SKPD</option>
+                <option value="program">Program</option>
+                <option value="sub_kegiatan">Sub Kegiatan</option>
+              </select>
+            </label>
+            <label class="page-size-control" for="realisasi-page-size">
+              Baris per halaman
+              <select id="realisasi-page-size" class="select-control compact-select">
+                <option value="10" selected>10</option>
+                <option value="25">25</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+              </select>
+            </label>
+          </div>
+          <div class="realisasi-data-filters">
+            <div>
+              <label class="field-label" for="data-year">Tahun</label>
+              <select id="data-year" class="select-control" disabled></select>
+            </div>
+            <div>
+              <label class="field-label" for="data-period">Periode</label>
+              <select id="data-period" class="select-control" disabled></select>
+            </div>
+          </div>
+        </div>
+        <form id="data-search-form" class="realisasi-search-form" role="search">
+          <label class="visually-hidden" for="data-search">Cari sub unit atau pekerjaan</label>
+          <div class="search-controls">
+            <input id="data-search" class="text-control" type="search"
+              placeholder="Cari sub unit, pekerjaan, indikator..." autocomplete="off">
+            <button class="button button-primary" type="submit">Cari</button>
+            <button id="data-export" class="button button-export" type="button">Unduh Excel</button>
+          </div>
+        </form>
+        <p id="data-status" class="form-status" role="status" aria-live="polite"></p>
+        <div class="realisasi-table-wrap">
+          <table class="realisasi-table">
+            <thead>
+              <tr>
+                <th scope="col">Kode</th>
+                <th scope="col">SKPD / Program / Sub Kegiatan</th>
+                <th scope="col">Indikator</th>
+                <th scope="col">Satuan</th>
+                <th scope="col">Target</th>
+                <th scope="col" class="numeric-cell">Capaian</th>
+                <th scope="col" class="numeric-cell">Persentase Capaian</th>
+                <th scope="col" class="numeric-cell">Pagu</th>
+                <th scope="col" class="numeric-cell">Realisasi</th>
+              </tr>
+            </thead>
+            <tbody id="data-rows">
+              <tr><td colspan="9">Pilih tahun dan periode.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="admin-pagination">
+          <button id="previous-page" class="button button-secondary" type="button" disabled>Sebelumnya</button>
+          <span id="page-indicator" class="helper-text"></span>
+          <button id="next-page" class="button button-secondary" type="button" disabled>Berikutnya</button>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

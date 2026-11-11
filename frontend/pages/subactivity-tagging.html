@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Pengelolaan tagging sub kegiatan APBD oleh administrator.">
+    <title>Tagging Sub Kegiatan | PPM Tools</title>
+    <link rel="stylesheet" href="/css/apbd.css?v=27">
+    <link rel="stylesheet" href="/css/admin.css?v=22">
+    <script src="/js/export-dialog.js?v=1" defer></script>
+    <script src="/js/excel-export.js?v=1" defer></script>
+    <script src="/js/admin-uploads.js?v=1" defer></script>
+    <script src="/js/tagging-subactivities.js?v=13" defer></script>
+  </head>
+  <body class="admin-page">
+    <aside class="admin-sidebar">
+      <a class="brand" href="/" aria-label="PPM Tools">
+        <span class="brand-mark" aria-hidden="true">P</span>
+        <span><strong>PPM Tools</strong><small>Panel admin</small></span>
+      </a>
+      <nav class="admin-navigation" aria-label="Navigasi admin">
+        <a href="/admin/dashboard">Dashboard</a>
+        <a href="/admin/sub-kegiatan">Sub Kegiatan</a>
+        <a href="/admin/realisasi">Realisasi Anggaran dan Kinerja</a>
+        <a href="/admin/tagging-sub-kegiatan" aria-current="page">Tagging Sub Kegiatan</a>
+        <a href="/admin/tahapan">Jenis Tagging dan Tahapan</a>
+        <a href="/admin/perangkat-daerah">Perangkat Daerah</a>
+        <a href="/admin/level-pekerjaan">Level Pekerjaan</a>
+        <a href="/admin/referensi">Indikator dan Satuan</a>
+      </nav>
+      <button id="logout-button" class="button button-secondary logout-button" type="button">
+        Keluar
+      </button>
+    </aside>
+    <main class="admin-main">
+      <header class="admin-heading">
+        <div>
+          <p class="eyebrow">PENGELOLAAN DATA</p>
+          <h1>Tagging Sub Kegiatan</h1>
+          <p id="admin-identity" class="helper-text"></p>
+        </div>
+        <a class="dashboard-public-cta" href="/">
+          <span class="dashboard-public-cta-icon" aria-hidden="true">&gt;</span>
+          <span><strong>Lihat dashboard publik</strong><small>Jelajahi data anggaran APBD dan ringkasannya</small></span>
+        </a>
+      </header>
+
+      <section class="panel tagging-panel" aria-labelledby="tagging-title">
+        <form id="tagging-import-form" class="tagging-import-form">
+          <div>
+            <label class="field-label" for="tagging-import-year">Tahun</label>
+            <select id="tagging-import-year" class="select-control" disabled>
+              <option value="">Pilih Tahun</option>
+            </select>
+          </div>
+          <div>
+            <label class="field-label" for="tagging-import-type">Jenis Tagging</label>
+            <select id="tagging-import-type" class="select-control" disabled required>
+              <option value="">Pilih jenis tagging</option>
+            </select>
+          </div>
+          <div class="tagging-import-file">
+            <label class="field-label" for="tagging-import-file">File Excel (.xlsx)</label>
+            <input id="tagging-import-file" class="text-control" type="file" accept=".xlsx" required>
+          </div>
+          <button id="tagging-import-submit" class="button button-primary" type="submit">Upload</button>
+        </form>
+        <p id="tagging-import-status" class="form-status" role="status" aria-live="polite"></p>
+        <p class="helper-text">
+          Kolom yang dikenali: Perangkat Daerah (nama sub unit), Kode (kode sub kegiatan), Sub Kegiatan (nama sub kegiatan); atau Kode/Nama Sub Unit dan Kode/Nama Sub Kegiatan. Baris header dicari otomatis.
+          NAMA PAKET/KELOMPOK diisi jika tagging sampai tingkat paket.
+          Impor menambah penandaan yang belum ada dan dapat mengubah penandaan
+          sub kegiatan menjadi penandaan paket; data duplikat tidak diubah.
+        </p>
+        <section class="uploaded-files-panel" aria-labelledby="uploaded-tagging-files-title">
+          <div class="section-heading">
+            <div>
+              <h2 id="uploaded-tagging-files-title">File impor Tagging Sub Kegiatan</h2>
+              <p class="helper-text">File Excel yang berhasil diimpor tersimpan dan dapat diunduh kembali.</p>
+            </div>
+          </div>
+          <div class="uploaded-files-toolbar">
+            <div>
+              <label class="field-label" for="uploaded-tagging-files-search">Cari nama file</label>
+              <input id="uploaded-tagging-files-search" class="text-control" type="search"
+                placeholder="Nama file..." autocomplete="off">
+            </div>
+            <div>
+              <label class="field-label" for="uploaded-tagging-files-page-size">Baris per halaman</label>
+              <select id="uploaded-tagging-files-page-size" class="select-control">
+                <option value="10" selected>10</option>
+                <option value="25">25</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+              </select>
+            </div>
+          </div>
+          <p id="uploaded-tagging-files-status" class="form-status" role="status" aria-live="polite"></p>
+          <div class="tahapan-table-wrap uploaded-files-table-wrap">
+            <table class="tahapan-table uploaded-files-table">
+              <thead>
+                <tr><th>Nama file</th><th>Tipe</th><th>Ukuran</th><th>Diunggah</th><th>Aksi</th></tr>
+              </thead>
+              <tbody id="uploaded-tagging-files-rows"></tbody>
+            </table>
+          </div>
+          <nav class="admin-pagination" aria-label="Pagination file Tagging Sub Kegiatan">
+            <button id="uploaded-tagging-files-previous" class="button button-secondary" type="button" disabled>Sebelumnya</button>
+            <span id="uploaded-tagging-files-page-indicator" class="helper-text"></span>
+            <button id="uploaded-tagging-files-next" class="button button-secondary" type="button" disabled>Berikutnya</button>
+          </nav>
+        </section>
+        <div class="section-heading">
+          <div>
+            <h2 id="tagging-title">Tagging Sub Kegiatan</h2>
+            <p class="helper-text">Pilih jenis tagging lalu simpan perubahan pada baris terkait.</p>
+          </div>
+        </div>
+        <div class="admin-filters admin-filters--tagging">
+          <div>
+            <label class="field-label" for="admin-year">Tahun</label>
+            <select id="admin-year" class="select-control" disabled>
+              <option value="">Memuat...</option>
+            </select>
+          </div>
+          <div>
+            <label class="field-label" for="admin-tagging-type">Jenis Tagging</label>
+            <select id="admin-tagging-type" class="select-control" disabled>
+              <option value="">Semua jenis tagging</option>
+            </select>
+          </div>
+          <div>
+            <label class="field-label" for="admin-tagging-scope">Tampilkan</label>
+            <select id="admin-tagging-scope" class="select-control">
+              <option value="sub_kegiatan">Sub kegiatan</option>
+              <option value="paket_kelompok">Paket/kelompok</option>
+            </select>
+          </div>
+          <form id="admin-search-form" class="admin-search">
+            <label class="field-label" for="admin-search">Cari subkegiatan</label>
+            <div class="search-controls">
+              <input id="admin-search" class="text-control" type="search"
+                placeholder="Kode atau nama subkegiatan" autocomplete="off">
+              <button class="button button-primary" type="submit">Cari</button>
+            </div>
+          </form>
+          <div class="admin-page-size">
+            <label class="field-label" for="admin-page-size">Baris per halaman</label>
+            <select id="admin-page-size" class="select-control">
+              <option value="10" selected>10</option>
+              <option value="25">25</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+            </select>
+          </div>
+        </div>
+        <div class="tagging-export-actions">
+          <button id="export-tagging-excel" class="button button-export" type="button" disabled>
+            Unduh Excel
+          </button>
+          <button id="export-tagging-pdf" class="button button-export" type="button" disabled
+            title="Buka dialog cetak; pilih Simpan sebagai PDF">
+            Unduh PDF
+          </button>
+        </div>
+        <p id="admin-status" class="form-status admin-tagging-count" role="status" aria-live="polite">
+          Memuat data...
+        </p>
+        <div id="tagging-list" class="tagging-list"></div>
+        <div class="admin-pagination">
+          <button id="previous-page" class="button button-secondary" type="button" disabled>
+            Sebelumnya
+          </button>
+          <span id="page-indicator" class="helper-text"></span>
+          <button id="next-page" class="button button-secondary" type="button" disabled>
+            Berikutnya
+          </button>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

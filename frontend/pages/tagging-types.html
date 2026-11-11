@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Pengelolaan jenis tagging APBD oleh administrator.">
+    <title>Jenis Tagging | PPM Tools</title>
+    <link rel="stylesheet" href="/css/apbd.css?v=27">
+    <link rel="stylesheet" href="/css/admin.css?v=22">
+    <script src="/js/tagging-types.js?v=6" defer></script>
+  </head>
+  <body class="admin-page tagging-types-page">
+    <aside class="admin-sidebar">
+      <a class="brand" href="/" aria-label="PPM Tools">
+        <span class="brand-mark" aria-hidden="true">P</span>
+        <span><strong>PPM Tools</strong><small>Panel admin</small></span>
+      </a>
+      <nav class="admin-navigation" aria-label="Navigasi admin">
+        <a href="/admin/dashboard">Dashboard</a>
+        <a href="/admin/sub-kegiatan">Sub Kegiatan</a>
+        <a href="/admin/realisasi">Realisasi Anggaran dan Kinerja</a>
+        <a href="/admin/tagging-sub-kegiatan">Tagging Sub Kegiatan</a>
+        <a href="/admin/tahapan" aria-current="page">Jenis Tagging dan Tahapan</a>
+        <a href="/admin/perangkat-daerah">Perangkat Daerah</a>
+        <a href="/admin/level-pekerjaan">Level Pekerjaan</a>
+        <a href="/admin/referensi">Indikator dan Satuan</a>
+      </nav>
+      <button id="logout-button" class="button button-secondary logout-button" type="button">
+        Keluar
+      </button>
+    </aside>
+    <main class="admin-main">
+      <header class="admin-heading">
+        <div>
+          <p class="eyebrow">PENGELOLAAN DATA</p>
+          <h1>Jenis Tagging</h1>
+          <p id="admin-identity" class="helper-text"></p>
+        </div>
+        <a class="dashboard-public-cta" href="/">
+          <span class="dashboard-public-cta-icon" aria-hidden="true">&gt;</span>
+          <span><strong>Lihat dashboard publik</strong><small>Jelajahi data anggaran APBD dan ringkasannya</small></span>
+        </a>
+      </header>
+
+      <section class="panel tagging-type-panel" aria-labelledby="tagging-type-title">
+        <div class="section-heading">
+          <div>
+            <h2 id="tagging-type-title">Daftar jenis tagging</h2>
+            <p class="helper-text">Tambah, edit, dan hapus jenis tagging. Kode dibuat otomatis; menghapus jenis tagging juga menghapus seluruh penandaannya.</p>
+          </div>
+        </div>
+        <form id="tagging-type-form" class="tagging-type-form">
+          <div>
+            <label class="field-label" for="tagging-type-name">Nama jenis tagging</label>
+            <input id="tagging-type-name" class="text-control" type="text"
+              maxlength="200" required autocomplete="off">
+          </div>
+          <div>
+            <label class="field-label" for="tagging-type-year">Tahun</label>
+            <select id="tagging-type-year" class="select-control" required>
+              <option value="">Memuat...</option>
+            </select>
+          </div>
+          <div class="tagging-type-form-actions">
+            <button id="tagging-type-submit" class="button button-primary" type="submit">
+              Tambah jenis tagging
+            </button>
+            <button id="tagging-type-cancel" class="button button-secondary" type="button" hidden>
+              Batal edit
+            </button>
+          </div>
+          <p class="tagging-type-code-note">Kode dibuat otomatis saat data disimpan.</p>
+        </form>
+        <p id="tagging-type-status" class="form-status" role="status" aria-live="polite"></p>
+        <div class="tagging-type-table-wrap">
+          <table class="tagging-type-table">
+            <thead>
+              <tr>
+                <th class="tagging-type-code-column" scope="col">Kode</th>
+                <th class="tagging-type-name-column" scope="col">Nama jenis tagging</th>
+                <th class="tagging-type-year-column" scope="col">Tahun</th>
+                <th class="tagging-type-action-column" scope="col">Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="tagging-type-table-body">
+              <tr><td class="tagging-type-empty" colspan="4">Memuat data...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

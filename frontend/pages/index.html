@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Daftar dan pencarian data anggaran APBD.">
+    <title>PPM Tools</title>
+    <link rel="stylesheet" href="/css/apbd.css?v=27">
+    <script src="/js/export-dialog.js?v=1" defer></script>
+    <script src="/js/excel-export.js?v=1" defer></script>
+    <script src="/js/apbd.js?v=29" defer></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="/" aria-label="PPM Tools">
+        <span class="brand-mark" aria-hidden="true">P</span>
+        <span>
+          <strong>PPM Tools</strong>
+          <!-- <small>Penetapan APBD</small> -->
+        </span>
+      </a>
+      <nav class="public-navigation" aria-label="Navigasi publik">
+        <a class="button button-secondary" href="/" aria-current="page">Dashboard</a>
+        <a class="button button-secondary" href="/tagging">Tagging</a>
+        <a class="button button-secondary" href="/realisasi">Realisasi dan Capaian</a>
+        <a class="button button-secondary" href="/tautan">Tautan</a>
+        <a class="button button-secondary" href="/perbandingan-anggaran">Perbandingan Anggaran</a>
+        <a class="button button-secondary header-login" href="/login">Admin</a>
+      </nav>
+      <!-- <span class="header-label">Portal data</span> -->
+    </header>
+
+    <main class="page-shell">
+      <section class="page-heading" aria-labelledby="page-title">
+        <div class="page-heading-grid">
+          <div class="page-heading-main">
+            <!-- <p class="eyebrow">DATA PEMERINTAHAN</p> -->
+            <div class="page-title-row">
+              <h1 id="page-title">Dashboard</h1>
+              <div class="page-selectors">
+                <div class="year-picker">
+                  <label class="field-label" for="year-select">Tahun</label>
+                  <select id="year-select" class="select-control year-select">
+                    <option value="">Memuat...</option>
+                  </select>
+                </div>
+                <div class="year-picker">
+                  <label class="field-label" for="tahapan-select">Tahapan</label>
+                  <select id="tahapan-select" class="select-control tahapan-select" disabled>
+                    <option value="">Pilih tahun terlebih dahulu</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            <!-- <p class="page-description">Telusuri rincian anggaran, organisasi, program, dan jenis tagging.</p> -->
+            <p id="year-status" class="helper-text" role="status">Pilih tahun untuk menampilkan data.</p>
+          </div>
+        </div>
+        <aside id="summary-panel" class="summary-panel" aria-labelledby="summary-title" hidden>
+          <div class="summary-heading">
+            <h2 id="summary-title">Ringkasan Umum</h2>
+            <span id="summary-year" class="year-badge"></span>
+          </div>
+          <div class="summary-layout">
+            <div id="tagging-summary" class="summary-grid" aria-live="polite"></div>
+          </div>
+        </aside>
+      </section>
+
+      <section id="tagging-summary-panel" class="summary-panel tagging-summary-panel"
+        aria-labelledby="tagging-summary-title" hidden>
+        <div class="summary-heading">
+          <h2 id="tagging-summary-title">Ringkasan Tagging</h2>
+        </div>
+        <div class="summary-table-wrap">
+          <table class="summary-table">
+            <thead>
+              <tr>
+                <th scope="col">Jenis tagging</th>
+                <th scope="col" class="numeric-cell">Jumlah Sub Unit</th>
+                <th scope="col" class="numeric-cell">Jumlah sub kegiatan</th>
+                <th scope="col" class="numeric-cell">Jumlah Paket/Kelompok</th>
+                <th scope="col" class="numeric-cell">Jumlah anggaran</th>
+              </tr>
+            </thead>
+            <tbody id="tagging-summary-details"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <div id="data-content" hidden>
+        <section class="panel data-panel" aria-labelledby="data-title">
+          <div class="data-toolbar">
+            <div>
+              <!-- <p class="eyebrow">DATA ANGGARAN</p> -->
+              <div class="data-title-row">
+                <h2 id="data-title">Rincian program</h2>
+                <button id="toggle-details" class="button button-secondary" type="button" disabled>
+                  Buka semua rincian
+                </button>
+                <label class="hierarchy-level-filter">
+                  Tampilkan hingga
+                  <select id="hierarchy-level-filter" class="select-control compact-select">
+                    <option value="skpd">SKPD</option>
+                    <option value="program">Program</option>
+                    <option value="kegiatan">Kegiatan</option>
+                    <option value="sub_kegiatan">Subkegiatan</option>
+                    <option value="kelompok">Paket/Kelompok</option>
+                  </select>
+                </label>
+              </div>
+              <p id="result-count" class="helper-text">Pilih tahun untuk memuat data.</p>
+            </div>
+            <form id="search-form" class="search-form" role="search">
+              <label class="visually-hidden" for="search-input">Cari data anggaran</label>
+              <div class="search-controls">
+                <label class="visually-hidden" for="search-level">Cari berdasarkan tingkat</label>
+                <select id="search-level" class="select-control compact-select" aria-label="Cari berdasarkan">
+                  <option value="skpd" selected>SKPD</option>
+                  <option value="program">Program</option>
+                  <option value="kegiatan">Kegiatan</option>
+                  <option value="sub_kegiatan">Subkegiatan</option>
+                  <option value="paket_kelompok">Paket/Kelompok</option>
+                </select>
+                <input id="search-input" class="text-control" type="search"
+                  placeholder="Cari SKPD" autocomplete="off">
+                <button id="search-button" class="button button-primary" type="submit">Cari</button>
+                <button id="clear-search" class="button button-secondary" type="button" hidden>Hapus</button>
+                <button id="export-excel" class="button button-export" type="button" disabled>Excel</button>
+                <button id="export-pdf" class="button button-export" type="button"
+                  title="Buka dialog cetak; pilih Simpan sebagai PDF" disabled>PDF</button>
+              </div>
+              <label class="field-label export-subunit-picker" for="export-subunits">
+                Subunit untuk unduhan (kosong = semua)
+                <select id="export-subunits" class="select-control" multiple size="5"
+                  aria-describedby="export-subunits-help" disabled></select>
+                <span id="export-subunits-help" class="helper-text">
+                  Gunakan Ctrl (Windows/Linux) atau Command (macOS) untuk memilih beberapa subunit.
+                </span>
+              </label>
+              <label id="level-search-wrap" class="dashboard-level-search" hidden>
+                <span id="level-search-label" class="field-label">Cari Program</span>
+                <input id="level-search-input" class="text-control" type="search"
+                  placeholder="Cari nama atau kode" autocomplete="off">
+              </label>
+            </form>
+          </div>
+
+          <div id="table-status" class="table-status" role="status" hidden></div>
+          <div class="table-scroll" id="table-scroll" hidden>
+            <table>
+              <colgroup>
+                <col class="code-column">
+                <col class="hierarchy-column">
+                <col class="pagu-column">
+                <col class="source-column">
+              </colgroup>
+              <thead>
+                <tr>
+                  <th scope="col">Kode</th>
+                  <th scope="col">SKPD / Program / Kegiatan / Subkegiatan / Paket/Kelompok</th>
+                  <th scope="col" class="numeric-cell">Pagu</th>
+                  <th scope="col">Sumber Dana</th>
+                </tr>
+              </thead>
+              <tbody id="data-rows"></tbody>
+            </table>
+          </div>
+
+          <div id="pagination" class="pagination-controls" hidden>
+            <label class="page-size-control" for="page-size">
+              Baris per halaman
+              <select id="page-size" class="select-control compact-select">
+                <option value="10" selected>10</option>
+                <option value="25">25</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+                <option value="130">130</option>
+              </select>
+            </label>
+            <div class="page-navigation">
+              <span id="page-indicator" class="helper-text"></span>
+              <button id="previous-page" class="button button-secondary" type="button">Sebelumnya</button>
+              <button id="next-page" class="button button-secondary" type="button">Berikutnya</button>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+    <footer class="site-footer">Data anggaran Penetapan APBD</footer>
+  </body>
+</html>

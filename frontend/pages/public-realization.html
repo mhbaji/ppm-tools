@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Realisasi anggaran dan capaian kinerja per subunit.">
+    <title>Realisasi dan Capaian | PPM Tools</title>
+    <link rel="stylesheet" href="/css/apbd.css?v=27">
+    <script src="/js/public-realization.js?v=2" defer></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="/" aria-label="PPM Tools">
+        <span class="brand-mark" aria-hidden="true">P</span>
+        <span><strong>PPM Tools</strong><small>Portal data publik</small></span>
+      </a>
+      <nav class="public-navigation" aria-label="Navigasi publik">
+        <a class="button button-secondary" href="/">Dashboard</a>
+        <a class="button button-secondary" href="/tagging">Tagging</a>
+        <a class="button button-secondary" href="/realisasi" aria-current="page">Realisasi dan Capaian</a>
+        <a class="button button-secondary" href="/tautan">Tautan</a>
+        <a class="button button-secondary" href="/perbandingan-anggaran">Perbandingan Anggaran</a>
+        <a class="button button-secondary" href="/login">Admin</a>
+      </nav>
+    </header>
+    <main class="page-shell">
+      <section class="page-heading" aria-labelledby="page-title">
+        <h1 id="page-title">Realisasi dan Capaian</h1>
+        <div class="public-data-filters">
+          <label class="field-label" for="realization-year">Tahun
+            <select id="realization-year" class="select-control" disabled></select>
+          </label>
+          <label class="field-label" for="realization-period">Periode
+            <select id="realization-period" class="select-control" disabled></select>
+          </label>
+          <div class="realization-subunit-filter">
+            <label class="field-label" for="realization-subunits">Subunit (pilih beberapa; kosong = semua)
+              <select id="realization-subunits" class="select-control" multiple size="5" disabled
+                aria-describedby="realization-subunits-help"></select>
+            </label>
+            <p id="realization-subunits-help" class="helper-text" role="status">
+              Gunakan Ctrl (Windows/Linux) atau Command (Mac) untuk memilih lebih dari satu.
+            </p>
+          </div>
+        </div>
+        <p id="realization-status" class="helper-text" role="status">Memuat data...</p>
+        <section id="realization-summary" class="summary-grid summary-count-row realization-summary-grid"
+          aria-label="Ringkasan realisasi dan capaian"></section>
+      </section>
+      <section class="panel" aria-labelledby="realization-table-title">
+        <div class="data-toolbar">
+          <div>
+            <h2 id="realization-table-title">Rincian kinerja dan anggaran</h2>
+            <p id="realization-count" class="helper-text"></p>
+          </div>
+          <form id="realization-search-form" class="search-form" role="search">
+            <label class="visually-hidden" for="realization-search">Cari rincian</label>
+            <input id="realization-search" class="text-control" type="search"
+              placeholder="Cari subunit, pekerjaan, indikator..." autocomplete="off">
+            <button class="button button-primary" type="submit">Cari</button>
+            <button id="realization-clear-search" class="button button-secondary" type="button" hidden>Hapus</button>
+            <button id="realization-export-excel" class="button button-export" type="button" disabled>Excel</button>
+            <button id="realization-export-pdf" class="button button-export" type="button" disabled>PDF</button>
+          </form>
+        </div>
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th><button class="sort-button" data-sort="subunit" type="button">Subunit</button></th>
+                <th><button class="sort-button" data-sort="level" type="button">Level</button></th>
+                <th><button class="sort-button" data-sort="work" type="button">Pekerjaan</button></th>
+                <th><button class="sort-button" data-sort="indicator" type="button">Indikator</button></th>
+                <th>Satuan</th>
+                <th class="numeric-cell"><button class="sort-button" data-sort="target" type="button">Target</button></th>
+                <th class="numeric-cell"><button class="sort-button" data-sort="achievement" type="button">Capaian</button></th>
+                <th class="numeric-cell">Persentase</th>
+                <th class="numeric-cell">Pagu</th>
+                <th class="numeric-cell"><button class="sort-button" data-sort="realization" type="button">Realisasi</button></th>
+              </tr>
+            </thead>
+            <tbody id="realization-rows">
+              <tr><td colspan="10">Pilih tahun dan periode.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="pagination-controls">
+          <label for="realization-page-size">Baris per halaman
+            <select id="realization-page-size" class="select-control compact-select">
+              <option>10</option><option>25</option><option>50</option><option>100</option>
+            </select>
+          </label>
+          <div class="page-navigation">
+            <span id="realization-page-indicator" class="helper-text"></span>
+            <button id="realization-previous" class="button button-secondary" type="button" disabled>Sebelumnya</button>
+            <button id="realization-next" class="button button-secondary" type="button" disabled>Berikutnya</button>
+          </div>
+        </div>
+      </section>
+    </main>
+    <footer class="site-footer">Data realisasi dan capaian kinerja</footer>
+  </body>
+</html>

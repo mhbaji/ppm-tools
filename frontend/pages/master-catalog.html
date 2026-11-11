@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Pengelolaan data referensi PPM Tools.">
+    <title>Data Referensi | PPM Tools</title>
+    <link rel="stylesheet" href="/css/apbd.css?v=27">
+    <link rel="stylesheet" href="/css/admin.css?v=22">
+    <script src="/js/master-catalog.js?v=5" defer></script>
+  </head>
+  <body class="admin-page catalog-page">
+    <aside class="admin-sidebar">
+      <a class="brand" href="/" aria-label="PPM Tools">
+        <span class="brand-mark" aria-hidden="true">P</span>
+        <span><strong>PPM Tools</strong><small>Panel admin</small></span>
+      </a>
+      <nav class="admin-navigation" aria-label="Navigasi admin">
+        <a href="/admin/dashboard">Dashboard</a>
+        <a href="/admin/sub-kegiatan">Sub Kegiatan</a>
+        <a href="/admin/realisasi">Realisasi Anggaran dan Kinerja</a>
+        <a href="/admin/tagging-sub-kegiatan">Tagging Sub Kegiatan</a>
+        <a href="/admin/tahapan">Jenis Tagging dan Tahapan</a>
+        <a href="/admin/perangkat-daerah">Perangkat Daerah</a>
+        <a href="/admin/level-pekerjaan">Level Pekerjaan</a>
+        <a href="/admin/referensi">Indikator dan Satuan</a>
+      </nav>
+      <button id="logout-button" class="button button-secondary logout-button" type="button">Keluar</button>
+    </aside>
+    <main class="admin-main">
+      <header class="admin-heading">
+        <div>
+          <p class="eyebrow">PENGELOLAAN DATA</p>
+          <h1 id="catalog-title">Data Referensi</h1>
+          <p id="admin-identity" class="helper-text"></p>
+        </div>
+        <a class="dashboard-public-cta" href="/">
+          <span class="dashboard-public-cta-icon" aria-hidden="true">&gt;</span>
+          <span><strong>Lihat dashboard publik</strong><small>Jelajahi data anggaran APBD dan ringkasannya</small></span>
+        </a>
+      </header>
+      <section id="single-catalog-panel" class="panel catalog-panel" aria-labelledby="catalog-title">
+        <form id="catalog-form" class="catalog-form">
+          <div>
+            <label id="catalog-name-label" class="field-label" for="catalog-name">Nama</label>
+            <input id="catalog-name" class="text-control" type="text" maxlength="200" required>
+          </div>
+          <button id="catalog-submit" class="button button-primary" type="submit">Tambah</button>
+          <button id="catalog-cancel" class="button button-secondary" type="button" hidden>Batal edit</button>
+        </form>
+        <p id="catalog-status" class="form-status" role="status" aria-live="polite"></p>
+        <div class="tahapan-table-wrap">
+          <table class="tahapan-table">
+            <thead><tr><th>ID</th><th id="catalog-name-heading">Nama</th><th>Aksi</th></tr></thead>
+            <tbody id="catalog-rows"></tbody>
+          </table>
+        </div>
+      </section>
+      <div id="combined-catalog-grid" class="combined-catalog-grid" hidden>
+        <div class="catalog-year-filter">
+          <label class="field-label" for="catalog-year">Tahun</label>
+          <select id="catalog-year" class="select-control" disabled></select>
+        </div>
+        <section class="panel catalog-panel" aria-labelledby="indicator-title">
+          <h2 id="indicator-title">Indikator</h2>
+          <label class="catalog-search">
+            <span class="field-label">Cari indikator</span>
+            <input id="indikator-search" class="text-control" type="search"
+              placeholder="Cari nama indikator" autocomplete="off">
+          </label>
+          <form id="indikator-form" class="catalog-form">
+            <div>
+              <label class="field-label" for="indikator-name">Nama indikator</label>
+              <input id="indikator-name" class="text-control" type="text" maxlength="200" required>
+            </div>
+            <button class="button button-primary" type="submit">Tambah</button>
+            <button id="indikator-cancel" class="button button-secondary" type="button" hidden>Batal edit</button>
+          </form>
+          <p id="indikator-status" class="form-status" role="status" aria-live="polite"></p>
+          <div class="tahapan-table-wrap">
+            <table class="tahapan-table">
+              <thead><tr><th>ID</th><th>Nama indikator</th><th>Aksi</th></tr></thead>
+              <tbody id="indikator-rows"></tbody>
+            </table>
+          </div>
+            <nav id="indikator-pagination" class="admin-pagination" aria-label="Pagination indikator">
+              <label class="page-size-control" for="indikator-page-size">Baris per halaman
+                <select id="indikator-page-size" class="select-control compact-select">
+                  <option value="10" selected>10</option><option value="25">25</option>
+                  <option value="50">50</option><option value="100">100</option>
+                </select>
+              </label>
+              <button id="indikator-previous" class="button button-secondary" type="button">Sebelumnya</button>
+              <span id="indikator-page-indicator" class="helper-text"></span>
+              <button id="indikator-next" class="button button-secondary" type="button">Berikutnya</button>
+            </nav>
+        </section>
+        <section class="panel catalog-panel" aria-labelledby="unit-title">
+          <h2 id="unit-title">Satuan</h2>
+          <label class="catalog-search">
+            <span class="field-label">Cari satuan</span>
+            <input id="satuan-search" class="text-control" type="search"
+              placeholder="Cari nama satuan" autocomplete="off">
+          </label>
+          <form id="satuan-form" class="catalog-form">
+            <div>
+              <label class="field-label" for="satuan-name">Nama satuan</label>
+              <input id="satuan-name" class="text-control" type="text" maxlength="200" required>
+            </div>
+            <button class="button button-primary" type="submit">Tambah</button>
+            <button id="satuan-cancel" class="button button-secondary" type="button" hidden>Batal edit</button>
+          </form>
+          <p id="satuan-status" class="form-status" role="status" aria-live="polite"></p>
+          <div class="tahapan-table-wrap">
+            <table class="tahapan-table">
+              <thead><tr><th>ID</th><th>Nama satuan</th><th>Aksi</th></tr></thead>
+              <tbody id="satuan-rows"></tbody>
+            </table>
+          </div>
+            <nav id="satuan-pagination" class="admin-pagination" aria-label="Pagination satuan">
+              <label class="page-size-control" for="satuan-page-size">Baris per halaman
+                <select id="satuan-page-size" class="select-control compact-select">
+                  <option value="10" selected>10</option><option value="25">25</option>
+                  <option value="50">50</option><option value="100">100</option>
+                </select>
+              </label>
+              <button id="satuan-previous" class="button button-secondary" type="button">Sebelumnya</button>
+              <span id="satuan-page-indicator" class="helper-text"></span>
+              <button id="satuan-next" class="button button-secondary" type="button">Berikutnya</button>
+            </nav>
+        </section>
+      </div>
+    </main>
+  </body>
+</html>

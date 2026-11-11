@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Pengelolaan perangkat daerah, sub unit, dan alias SKPD.">
+    <title>Perangkat Daerah | PPM Tools</title>
+    <link rel="stylesheet" href="/css/apbd.css?v=27">
+    <link rel="stylesheet" href="/css/admin.css?v=23">
+    <script src="/js/departments.js?v=4" defer></script>
+  </head>
+  <body class="admin-page catalog-page">
+    <aside class="admin-sidebar">
+      <a class="brand" href="/" aria-label="PPM Tools">
+        <span class="brand-mark" aria-hidden="true">P</span>
+        <span><strong>PPM Tools</strong><small>Panel admin</small></span>
+      </a>
+      <nav class="admin-navigation" aria-label="Navigasi admin">
+        <a href="/admin/dashboard">Dashboard</a>
+        <a href="/admin/sub-kegiatan">Sub Kegiatan</a>
+        <a href="/admin/realisasi">Realisasi Anggaran dan Kinerja</a>
+        <a href="/admin/tagging-sub-kegiatan">Tagging Sub Kegiatan</a>
+        <a href="/admin/tahapan">Jenis Tagging dan Tahapan</a>
+        <a href="/admin/perangkat-daerah" aria-current="page">Perangkat Daerah</a>
+        <a href="/admin/level-pekerjaan">Level Pekerjaan</a>
+        <a href="/admin/referensi">Indikator dan Satuan</a>
+      </nav>
+      <button id="logout-button" class="button button-secondary logout-button" type="button">Keluar</button>
+    </aside>
+    <main class="admin-main">
+      <header class="admin-heading">
+        <div>
+          <p class="eyebrow">PENGELOLAAN DATA</p>
+          <h1>Perangkat Daerah</h1>
+          <p id="admin-identity" class="helper-text"></p>
+        </div>
+        <a class="dashboard-public-cta" href="/">
+          <span class="dashboard-public-cta-icon" aria-hidden="true">&gt;</span>
+          <span><strong>Lihat dashboard publik</strong><small>Jelajahi data anggaran APBD dan ringkasannya</small></span>
+        </a>
+      </header>
+      <section class="panel catalog-panel">
+        <div class="catalog-filter">
+          <label class="field-label" for="master-year">Tahun</label>
+          <select id="master-year" class="select-control" required>
+            <option value="">Memuat...</option>
+          </select>
+        </div>
+        <p id="master-status" class="form-status" role="status" aria-live="polite"></p>
+      </section>
+      <section class="panel catalog-panel" aria-labelledby="skpd-title">
+        <div class="section-heading"><h2 id="skpd-title">SKPD dan alias</h2></div>
+        <form id="skpd-form" class="catalog-form">
+          <div>
+            <label class="field-label" for="skpd-code">Kode SKPD</label>
+            <input id="skpd-code" class="text-control" type="text" maxlength="100" required>
+          </div>
+          <div>
+            <label class="field-label" for="skpd-name">Nama resmi SKPD</label>
+            <input id="skpd-name" class="text-control" type="text" maxlength="200" required>
+          </div>
+          <button id="skpd-submit" class="button button-primary" type="submit">Tambah SKPD</button>
+          <button id="skpd-cancel" class="button button-secondary" type="button" hidden>Batal edit</button>
+        </form>
+        <div class="tahapan-table-wrap device-table-wrap">
+          <table class="tahapan-table device-table device-table-skpd">
+            <thead><tr><th>Kode</th><th>Nama resmi</th><th>Alias</th><th>Aksi</th></tr></thead>
+            <tbody id="skpd-rows"></tbody>
+          </table>
+        </div>
+        <nav class="admin-pagination" aria-label="Pagination SKPD">
+          <label class="page-size-control" for="skpd-page-size">Baris per halaman
+            <select id="skpd-page-size" class="select-control compact-select">
+              <option value="10" selected>10</option><option value="25">25</option>
+              <option value="50">50</option><option value="100">100</option>
+            </select>
+          </label>
+          <button id="skpd-previous" class="button button-secondary" type="button">Sebelumnya</button>
+          <span id="skpd-page-indicator" class="helper-text"></span>
+          <button id="skpd-next" class="button button-secondary" type="button">Berikutnya</button>
+        </nav>
+        <form id="alias-form" class="catalog-form alias-form">
+          <div>
+            <label class="field-label" for="alias-skpd">SKPD</label>
+            <select id="alias-skpd" class="select-control" required></select>
+          </div>
+          <div>
+            <label class="field-label" for="alias-name">Nama alias</label>
+            <input id="alias-name" class="text-control" type="text" maxlength="200" required>
+          </div>
+          <button id="alias-submit" class="button button-primary" type="submit">Tambah alias</button>
+          <button id="alias-cancel" class="button button-secondary" type="button" hidden>Batal edit</button>
+        </form>
+      </section>
+      <section class="panel catalog-panel" aria-labelledby="subunit-title">
+        <div class="section-heading"><h2 id="subunit-title">Sub unit</h2></div>
+        <form id="subunit-form" class="catalog-form">
+          <div>
+            <label class="field-label" for="subunit-code">Kode sub unit</label>
+            <input id="subunit-code" class="text-control" type="text" maxlength="100" required>
+          </div>
+          <div>
+            <label class="field-label" for="subunit-name">Nama sub unit</label>
+            <input id="subunit-name" class="text-control" type="text" maxlength="200" required>
+          </div>
+          <button id="subunit-submit" class="button button-primary" type="submit">Tambah sub unit</button>
+          <button id="subunit-cancel" class="button button-secondary" type="button" hidden>Batal edit</button>
+        </form>
+        <div class="tahapan-table-wrap device-table-wrap">
+          <table class="tahapan-table device-table device-table-subunit">
+            <thead><tr><th>Kode</th><th>Nama sub unit</th><th>Aksi</th></tr></thead>
+            <tbody id="subunit-rows"></tbody>
+          </table>
+        </div>
+        <nav class="admin-pagination" aria-label="Pagination sub unit">
+          <label class="page-size-control" for="subunit-page-size">Baris per halaman
+            <select id="subunit-page-size" class="select-control compact-select">
+              <option value="10" selected>10</option><option value="25">25</option>
+              <option value="50">50</option><option value="100">100</option>
+            </select>
+          </label>
+          <button id="subunit-previous" class="button button-secondary" type="button">Sebelumnya</button>
+          <span id="subunit-page-indicator" class="helper-text"></span>
+          <button id="subunit-next" class="button button-secondary" type="button">Berikutnya</button>
+        </nav>
+      </section>
+    </main>
+  </body>
+</html>

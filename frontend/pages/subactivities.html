@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Impor dan penelusuran rincian sub kegiatan APBD.">
+    <title>Sub Kegiatan | PPM Tools</title>
+    <link rel="stylesheet" href="/css/apbd.css?v=27">
+    <link rel="stylesheet" href="/css/admin.css?v=22">
+    <script src="/js/admin-uploads.js?v=1" defer></script>
+    <script src="/js/subactivities.js?v=3" defer></script>
+  </head>
+  <body class="admin-page subactivity-page">
+    <aside class="admin-sidebar">
+      <a class="brand" href="/" aria-label="PPM Tools">
+        <span class="brand-mark" aria-hidden="true">P</span>
+        <span><strong>PPM Tools</strong><small>Panel admin</small></span>
+      </a>
+      <nav class="admin-navigation" aria-label="Navigasi admin">
+        <a href="/admin/dashboard">Dashboard</a>
+        <a href="/admin/sub-kegiatan" aria-current="page">Sub Kegiatan</a>
+        <a href="/admin/realisasi">Realisasi Anggaran dan Kinerja</a>
+        <a href="/admin/tagging-sub-kegiatan">Tagging Sub Kegiatan</a>
+        <a href="/admin/tahapan">Jenis Tagging dan Tahapan</a>
+        <a href="/admin/perangkat-daerah">Perangkat Daerah</a>
+        <a href="/admin/level-pekerjaan">Level Pekerjaan</a>
+        <a href="/admin/referensi">Indikator dan Satuan</a>
+      </nav>
+      <button id="logout-button" class="button button-secondary logout-button" type="button">
+        Keluar
+      </button>
+    </aside>
+    <main class="admin-main">
+      <header class="admin-heading">
+        <div>
+          <p class="eyebrow">PENGELOLAAN DATA</p>
+          <h1>Sub Kegiatan</h1>
+          <p id="admin-identity" class="helper-text"></p>
+        </div>
+        <a class="dashboard-public-cta" href="/">
+          <span class="dashboard-public-cta-icon" aria-hidden="true">&gt;</span>
+          <span><strong>Lihat dashboard publik</strong><small>Jelajahi data anggaran APBD dan ringkasannya</small></span>
+        </a>
+      </header>
+
+      <section class="panel subactivity-import-panel" aria-labelledby="import-title">
+        <div class="section-heading">
+          <div>
+            <h2 id="import-title">Import data APBD</h2>
+            <p class="helper-text">Data pada pasangan tahun dan tahapan terpilih akan diganti sesuai isi file. Kolom: KODE SUB UNIT, NAMA SUB UNIT, kode/nama urusan, bidang urusan, program, kegiatan, sub kegiatan, sumber dana, rekening, NAMA PAKET/KELOMPOK, dan PAGU.</p>
+          </div>
+        </div>
+        <form id="subactivity-import-form" class="subactivity-import-form">
+          <div>
+            <label class="field-label" for="import-year">Tahun</label>
+            <select id="import-year" class="select-control" required>
+              <option value="">Pilih Tahun</option>
+            </select>
+          </div>
+          <div>
+            <label class="field-label" for="import-stage">Tahapan</label>
+            <select id="import-stage" class="select-control" required disabled>
+              <option value="">Pilih Tahun terlebih dahulu</option>
+            </select>
+          </div>
+          <div class="subactivity-file-field">
+            <label class="field-label" for="import-file">File Excel (.xlsx)</label>
+            <input id="import-file" class="text-control" type="file" accept=".xlsx" required>
+          </div>
+          <button id="import-submit" class="button button-primary" type="submit">Upload</button>
+        </form>
+        <p id="import-status" class="form-status" role="status" aria-live="polite"></p>
+      </section>
+
+      <section class="panel uploaded-files-panel" aria-labelledby="uploaded-files-title">
+        <div class="section-heading">
+          <div>
+            <h2 id="uploaded-files-title">File impor Sub Kegiatan</h2>
+            <p class="helper-text">File Excel yang berhasil diimpor tersimpan dan dapat diunduh kembali.</p>
+          </div>
+        </div>
+        <div class="uploaded-files-toolbar">
+          <div>
+            <label class="field-label" for="uploaded-files-search">Cari nama file</label>
+            <input id="uploaded-files-search" class="text-control" type="search"
+              placeholder="Nama file..." autocomplete="off">
+          </div>
+          <div>
+            <label class="field-label" for="uploaded-files-page-size">Baris per halaman</label>
+            <select id="uploaded-files-page-size" class="select-control">
+              <option value="10" selected>10</option>
+              <option value="25">25</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+            </select>
+          </div>
+        </div>
+        <p id="uploaded-files-status" class="form-status" role="status" aria-live="polite"></p>
+        <div class="tahapan-table-wrap uploaded-files-table-wrap">
+          <table class="tahapan-table uploaded-files-table">
+            <thead>
+              <tr><th>Nama file</th><th>Tipe</th><th>Ukuran</th><th>Diunggah</th><th>Aksi</th></tr>
+            </thead>
+            <tbody id="uploaded-files-rows"></tbody>
+          </table>
+        </div>
+        <nav class="admin-pagination" aria-label="Pagination file Sub Kegiatan">
+          <button id="uploaded-files-previous" class="button button-secondary" type="button" disabled>Sebelumnya</button>
+          <span id="uploaded-files-page-indicator" class="helper-text"></span>
+          <button id="uploaded-files-next" class="button button-secondary" type="button" disabled>Berikutnya</button>
+        </nav>
+      </section>
+
+      <section class="panel subactivity-data-panel" aria-labelledby="imports-title">
+        <div class="section-heading">
+          <div><h2 id="imports-title">Rekapan data sub kegiatan</h2></div>
+        </div>
+        <div class="subactivity-table-wrap">
+          <table class="subactivity-table import-history-table">
+            <thead>
+              <tr><th>No</th><th>Tahun</th><th>Tahapan</th><th>Update Terakhir</th><th>Aksi</th></tr>
+            </thead>
+            <tbody id="import-history-rows"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel subactivity-data-panel" aria-labelledby="subactivity-title">
+        <div class="section-heading">
+          <div>
+            <h2 id="subactivity-title">Detail sub kegiatan</h2>
+          </div>
+        </div>
+        <div class="subactivity-filters">
+          <div>
+            <label class="field-label" for="subactivity-year">Tahun</label>
+            <select id="subactivity-year" class="select-control">
+              <option value="">Pilih Tahun</option>
+            </select>
+          </div>
+          <div>
+            <label class="field-label" for="subactivity-stage">Tahapan</label>
+            <select id="subactivity-stage" class="select-control" disabled>
+              <option value="">Pilih Tahun terlebih dahulu</option>
+            </select>
+          </div>
+          <div class="subactivity-page-size">
+            <label class="field-label" for="subactivity-page-size">Baris per halaman</label>
+            <select id="subactivity-page-size" class="select-control">
+              <option value="10" selected>10</option>
+              <option value="25">25</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+            </select>
+          </div>
+        </div>
+        <div id="subactivity-summary" class="subactivity-summary" aria-live="polite"></div>
+        <p id="subactivity-status" class="form-status" role="status" aria-live="polite">Pilih tahun dan tahapan untuk menampilkan data.</p>
+        <div class="subactivity-table-wrap">
+          <table class="subactivity-table">
+            <colgroup>
+              <col class="subactivity-code-column">
+              <col class="subactivity-name-column">
+              <col class="subactivity-budget-column">
+              <col class="subactivity-source-column">
+            </colgroup>
+            <thead>
+              <tr>
+                <th scope="col">Kode</th>
+                <th scope="col">SKPD / Program / Kegiatan / Sub Kegiatan / Paket / Kelompok / Rekening</th>
+                <th scope="col" class="numeric-cell">Pagu</th>
+                <th scope="col">Sumber Dana</th>
+              </tr>
+            </thead>
+            <tbody id="subactivity-rows"></tbody>
+          </table>
+        </div>
+        <div class="admin-pagination">
+          <button id="subactivity-previous" class="button button-secondary" type="button" disabled>Sebelumnya</button>
+          <span id="subactivity-page-indicator" class="helper-text"></span>
+          <button id="subactivity-next" class="button button-secondary" type="button" disabled>Berikutnya</button>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

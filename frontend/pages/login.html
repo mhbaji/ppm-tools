@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Login administrator data anggaran APBD.">
+    <title>Login Admin | PPM Tools</title>
+    <link rel="stylesheet" href="/css/apbd.css?v=27">
+    <link rel="stylesheet" href="/css/admin.css?v=22">
+    <script src="/js/login.js?v=2" defer></script>
+  </head>
+  <body class="auth-page">
+    <header class="site-header">
+      <a class="brand" href="/" aria-label="PPM Tools">
+        <span class="brand-mark" aria-hidden="true">P</span>
+        <span><strong>PPM Tools</strong></span>
+      </a>
+    </header>
+    <main class="auth-shell">
+      <section class="panel auth-panel" aria-labelledby="login-title">
+        <p class="eyebrow">AREA ADMINISTRATOR</p>
+        <h1 id="login-title">Login</h1>
+        <p class="helper-text auth-intro">Masuk untuk mengelola tagging sub kegiatan.</p>
+        <form id="login-form" class="auth-form">
+          <label class="field-label" for="username">Username</label>
+          <input id="username" name="username" class="text-control" type="text"
+            autocomplete="username" maxlength="200" required>
+          <label class="field-label" for="password">Password</label>
+          <input id="password" name="password" class="text-control" type="password"
+            autocomplete="current-password" maxlength="1024" required>
+          <p id="login-status" class="form-status" role="status" aria-live="polite"></p>
+          <button id="login-button" class="button button-primary auth-submit" type="submit" disabled>
+            Login
+          </button>
+        </form>
+        <p class="contact-admin">Anda belum punya akun? Hubungi admin.</p>
+        <a class="auth-back" href="/">Kembali ke data anggaran</a>
+      </section>
+    </main>
+  </body>
+</html>

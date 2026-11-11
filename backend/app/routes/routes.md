@@ -1,0 +1,15 @@
+# Pemisahan rute
+
+- `pages.py` mendaftarkan halaman aktif dan aset frontend; URL yang sudah dipakai klien tetap dipertahankan.
+- `public.py` berisi route API untuk tahun, subunit, tahapan, tagging, anggaran, perbandingan, realisasi publik, dan direktori tautan.
+- `admin.py` berisi route autentikasi serta pengelolaan data admin, topik, dan tautan.
+- `admin_helpers.py` menampung validasi, impor, query, dan serialisasi khusus admin.
+- `public_helpers.py` menampung query, hierarki, dan utilitas ekspor untuk route publik.
+- `common.py` menyediakan validasi, autentikasi, pembentukan hierarki, dan handler error bersama.
+- Modul route dan helper memiliki docstring tujuan; fungsi route/helper menjelaskan maksudnya.
+- Halaman dan endpoint Dinamisasi Anggaran tidak didaftarkan.
+- `/realisasi` menyajikan halaman publik realisasi; `GET /api/realisasi/periods` dan `GET /api/realisasi` mengembalikan periode/data yang difilter tahun, periode, subunit, pencarian, pagination, dan sorting. Tambahkan `format=excel` pada `/api/realisasi` untuk ekspor seluruh hasil terfilter di server.
+- `GET /api/sub-units` mengembalikan subunit untuk tahun terpilih. Filter ekspor Dashboard dan Tagging mengirim `skpd_code` berulang; tanpa pilihan, semua subunit disertakan.
+- `GET /api/anggaran` menyediakan hierarki Dashboard dan ekspor Excel; ekspor Dashboard tidak menyertakan baris rekening, mempertahankan nilai agregat, dan menggunakan indentasi satu spasi per tingkat hierarki.
+- `/tautan` dan `GET /api/link-directory` hanya menampilkan tautan aktif. API menyertakan ringkasan jumlah seluruh topik utama, topik rincian, dan tautan aktif. Tanpa filter, API mengembalikan topik utama, hingga lima subtopik per topik, serta pratinjau tiga tautan terbaru per subtopik. `category_id` mengembalikan tautan aktif berpaginasi untuk satu subtopik; bila digabungkan dengan `q`, pencarian dibatasi pada judul/deskripsi/tag tautan subtopik tersebut. Pencarian global `q` mencari judul, deskripsi, tag, dan nama/deskripsi topik; `topic_id` membatasi pencarian global ke satu topik utama. Hasil pencarian global memuat label topik dan subtopik agar hierarkinya dapat ditampilkan. `/admin/tautan` memakai `GET/POST/PATCH/DELETE /api/admin/link-categories` serta `GET/POST/PATCH/DELETE /api/admin/links`; tautan mencatat tahun, waktu input, dan waktu update otomatis. Perubahan status memakai `PATCH /api/admin/links/<id>/status`.
+- API mutasi topik/tautan memakai autentikasi admin dan CSRF. Semua admin dapat mengelola topik serta mengubah status tautan; hanya pembuat yang dapat mengedit atau menghapus rincian tautannya.

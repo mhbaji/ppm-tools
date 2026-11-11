@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Ringkasan data sub kegiatan dan jenis tagging APBD.">
+    <title>Dashboard Admin | PPM Tools</title>
+    <link rel="stylesheet" href="/css/apbd.css?v=27">
+    <link rel="stylesheet" href="/css/admin.css?v=22">
+    <script src="/js/admin-dashboard.js?v=6" defer></script>
+  </head>
+  <body class="admin-page">
+    <aside class="admin-sidebar">
+      <a class="brand" href="/" aria-label="PPM Tools">
+        <span class="brand-mark" aria-hidden="true">P</span>
+        <span><strong>PPM Tools</strong><small>Panel admin</small></span>
+      </a>
+      <nav class="admin-navigation" aria-label="Navigasi admin">
+        <a href="/admin/dashboard" aria-current="page">Dashboard</a>
+        <a href="/admin/sub-kegiatan">Sub Kegiatan</a>
+        <a href="/admin/realisasi">Realisasi Anggaran dan Kinerja</a>
+        <a href="/admin/tautan">Tautan</a>
+        <a href="/admin/tagging-sub-kegiatan">Tagging Sub Kegiatan</a>
+        <a href="/admin/tahapan">Jenis Tagging dan Tahapan</a>
+        <a href="/admin/perangkat-daerah">Perangkat Daerah</a>
+        <a href="/admin/level-pekerjaan">Level Pekerjaan</a>
+        <a href="/admin/referensi">Indikator dan Satuan</a>
+      </nav>
+      <button id="logout-button" class="button button-secondary logout-button" type="button">Keluar</button>
+    </aside>
+    <main class="admin-main">
+      <header class="admin-heading">
+        <div>
+          <p class="eyebrow">RINGKASAN DATA</p>
+          <h1>Dashboard</h1>
+          <p id="admin-identity" class="helper-text"></p>
+        </div>
+        <a class="dashboard-public-cta" href="/">
+          <span class="dashboard-public-cta-icon" aria-hidden="true">&gt;</span>
+          <span>
+            <strong>Lihat dashboard publik</strong>
+            <small>Jelajahi data anggaran APBD dan ringkasannya</small>
+          </span>
+        </a>
+      </header>
+      <section class="panel dashboard-panel" aria-labelledby="dashboard-title">
+        <div class="admin-filters dashboard-filters">
+          <div>
+            <label class="field-label" for="dashboard-year">Tahun</label>
+            <select id="dashboard-year" class="select-control">
+              <option value="">Pilih Tahun</option>
+            </select>
+          </div>
+          <div>
+            <label class="field-label" for="dashboard-stage">Tahapan</label>
+            <select id="dashboard-stage" class="select-control" disabled>
+              <option value="">Pilih Tahun terlebih dahulu</option>
+            </select>
+          </div>
+        </div>
+        <p id="dashboard-status" class="form-status" role="status" aria-live="polite"></p>
+        <div id="dashboard-summary" class="dashboard-summary"></div>
+        <div class="dashboard-tagging-summary" aria-labelledby="dashboard-tagging-title">
+          <h2 id="dashboard-tagging-title">Ringkasan Tagging</h2>
+        </div>
+        <div class="dashboard-table-wrap">
+          <table class="dashboard-table">
+            <thead>
+              <tr>
+                <th scope="col">Jenis tagging</th>
+                <th scope="col">Jumlah Sub Unit</th>
+                <th scope="col">Jumlah sub kegiatan</th>
+                <th scope="col">Jumlah Paket/Kelompok</th>
+                <th scope="col" class="numeric-cell">Jumlah anggaran</th>
+              </tr>
+            </thead>
+            <tbody id="dashboard-tagging-types"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

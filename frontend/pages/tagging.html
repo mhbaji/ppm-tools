@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Daftar publik tagging sub kegiatan dan paket pekerjaan.">
+    <title>Tagging | PPM Tools</title>
+    <link rel="stylesheet" href="/css/apbd.css?v=27">
+    <script src="/js/export-dialog.js?v=1" defer></script>
+    <script src="/js/excel-export.js?v=1" defer></script>
+    <script src="/js/tagging.js?v=11" defer></script>
+  </head>
+  <body class="public-tagging-page">
+    <header class="site-header">
+      <a class="brand" href="/" aria-label="PPM Tools">
+        <span class="brand-mark" aria-hidden="true">P</span>
+        <span><strong>PPM Tools</strong><small>Portal data publik</small></span>
+      </a>
+      <nav class="public-navigation" aria-label="Navigasi publik">
+        <a class="button button-secondary" href="/">Dashboard</a>
+        <a class="button button-secondary" href="/tagging" aria-current="page">Tagging</a>
+        <a class="button button-secondary" href="/realisasi">Realisasi dan Capaian</a>
+        <a class="button button-secondary" href="/tautan">Tautan</a>
+        <a class="button button-secondary" href="/perbandingan-anggaran">Perbandingan Anggaran</a>
+        <a class="button button-secondary" href="/login">Admin</a>
+      </nav>
+    </header>
+
+    <main class="page-shell">
+      <section class="page-heading" aria-labelledby="page-title">
+        <div class="page-title-row">
+          <h1 id="page-title">Tagging</h1>
+          <div class="tagging-public-filters">
+            <div>
+              <label class="field-label" for="tagging-year">Tahun</label>
+              <select id="tagging-year" class="select-control" disabled>
+                <option value="">Memuat...</option>
+              </select>
+            </div>
+            <div>
+              <label class="field-label" for="tagging-name">Nama Tagging</label>
+              <select id="tagging-name" class="select-control" disabled>
+                <option value="">Semua jenis tagging</option>
+              </select>
+            </div>
+            <div>
+              <label class="field-label" for="tagging-stage">Tahapan</label>
+              <select id="tagging-stage" class="select-control" disabled>
+                <option value="">Memuat...</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <p id="tagging-status" class="helper-text" role="status">Memuat daftar tagging...</p>
+        <section id="tagging-summary" class="tagging-public-summary" aria-label="Ringkasan tagging"></section>
+      </section>
+
+      <section class="panel tagging-public-panel" aria-labelledby="list-title">
+        <div class="tagging-public-toolbar">
+          <div>
+            <h2 id="list-title">Daftar tagging sub kegiatan/paket pekerjaan</h2>
+            <p id="tagging-count" class="helper-text"></p>
+          </div>
+          <div class="tagging-public-actions">
+            <form id="tagging-search-form" class="tagging-search-form" role="search">
+              <label class="visually-hidden" for="tagging-search">Cari daftar tagging</label>
+              <input id="tagging-search" class="text-control" type="search"
+                placeholder="Cari perangkat daerah, sub kegiatan, paket..." autocomplete="off">
+              <button id="tagging-search-button" class="button button-primary" type="submit">Cari</button>
+              <button id="tagging-clear-search" class="button button-secondary" type="button" hidden>Hapus</button>
+            </form>
+            <button id="tagging-toggle-all" class="button button-secondary" type="button" disabled hidden>
+              Buka semua paket/kelompok
+            </button>
+            <label class="hierarchy-level-filter">
+              Tampilkan
+              <select id="tagging-level-filter" class="select-control compact-select">
+                <option value="sub_unit">Sub Unit</option>
+                <option value="sub_kegiatan">Sub Kegiatan</option>
+                <option value="paket">Paket/Kelompok</option>
+              </select>
+            </label>
+            <label class="field-label export-subunit-picker" for="tagging-export-subunits">
+              Subunit untuk unduhan (kosong = semua)
+              <select id="tagging-export-subunits" class="select-control" multiple size="4" disabled></select>
+            </label>
+            <button id="tagging-export-excel" class="button button-export" type="button" disabled>
+              Unduh Excel
+            </button>
+            <button id="tagging-export-pdf" class="button button-export" type="button" disabled
+              title="Buka dialog cetak; pilih Simpan sebagai PDF">
+              Unduh PDF
+            </button>
+          </div>
+        </div>
+        <div class="tagging-public-list-wrap">
+          <table class="tagging-public-table">
+            <thead>
+              <tr>
+                <th scope="col">Kode</th>
+                <th scope="col">Sub Unit / Sub Kegiatan / Paket/Kelompok</th>
+                <th scope="col" class="numeric-cell">Anggaran</th>
+                <th scope="col" class="numeric-cell">Realisasi Total</th>
+                <th scope="col" class="numeric-cell">Triwulan I</th>
+                <th scope="col" class="numeric-cell">Triwulan II</th>
+                <th scope="col" class="numeric-cell">Triwulan III</th>
+                <th scope="col" class="numeric-cell">Triwulan IV</th>
+              </tr>
+            </thead>
+            <tbody id="tagging-rows">
+              <tr><td colspan="8">Memuat data...</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <nav class="pagination-controls" aria-label="Halaman daftar tagging">
+          <span id="tagging-page-indicator" class="helper-text"></span>
+          <div class="page-navigation">
+            <button id="tagging-previous" class="button button-secondary" type="button" disabled>
+              Sebelumnya
+            </button>
+            <button id="tagging-next" class="button button-secondary" type="button" disabled>
+              Berikutnya
+            </button>
+          </div>
+        </nav>
+      </section>
+    </main>
+    <footer class="site-footer">Data tagging APBD</footer>
+  </body>
+</html>

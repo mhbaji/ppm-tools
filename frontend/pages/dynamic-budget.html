@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Perkembangan anggaran APBD pada setiap tahapan.">
+    <title>Dinamisasi Anggaran | PPM Tools</title>
+    <link rel="stylesheet" href="/css/apbd.css?v=27">
+    <script src="/js/export-dialog.js?v=1" defer></script>
+    <script src="/js/dynamic-budget.js?v=5" defer></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="/" aria-label="PPM Tools">
+        <span class="brand-mark" aria-hidden="true">P</span>
+        <span><strong>PPM Tools</strong><small>Portal data publik</small></span>
+      </a>
+      <nav class="public-navigation" aria-label="Navigasi publik">
+        <a class="button button-secondary" href="/">Dashboard</a>
+        <a class="button button-secondary" href="/tagging">Tagging</a>
+        <a class="button button-secondary" href="/perbandingan-anggaran">Perbandingan Anggaran</a>
+        <a class="button button-secondary" href="/login">Admin</a>
+      </nav>
+    </header>
+
+    <main class="page-shell">
+      <section class="page-heading" aria-labelledby="page-title">
+        <div class="page-title-row">
+          <h1 id="page-title">Dinamisasi Anggaran</h1>
+          <div class="dynamic-budget-filters">
+            <div>
+              <label class="field-label" for="dynamic-year">Tahun</label>
+              <select id="dynamic-year" class="select-control" disabled>
+                <option value="">Memuat...</option>
+              </select>
+            </div>
+            <div>
+              <label class="field-label" for="dynamic-sub-unit">Sub Unit</label>
+              <select id="dynamic-sub-unit" class="select-control" disabled>
+                <option value="">Semua Sub Unit</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <p id="dynamic-status" class="helper-text" role="status">Memuat data...</p>
+      </section>
+
+      <section class="panel dynamic-budget-panel" aria-labelledby="dynamic-table-title">
+        <div class="dynamic-budget-toolbar">
+          <div>
+            <h2 id="dynamic-table-title">Perkembangan Anggaran per Tahapan</h2>
+            <p id="dynamic-count" class="helper-text"></p>
+          </div>
+          <div class="comparison-detail-actions">
+            <button id="dynamic-toggle-all" class="button button-secondary" type="button">
+              Buka semua rincian
+            </button>
+            <label class="hierarchy-level-filter" for="dynamic-level-filter">
+              Tampilkan hingga
+              <select id="dynamic-level-filter" class="select-control compact-select">
+                <option value="sub_unit">SKPD</option>
+                <option value="program">Program</option>
+                <option value="kegiatan">Kegiatan</option>
+                <option value="sub_kegiatan">Subkegiatan</option>
+                <option value="paket">Paket</option>
+                <option value="kelompok">Kelompok</option>
+                <option value="rekening">Rekening</option>
+              </select>
+            </label>
+          </div>
+          <form id="dynamic-search-form" class="dynamic-search-form" role="search">
+            <label class="visually-hidden" for="dynamic-search">Cari dinamisasi anggaran</label>
+            <input id="dynamic-search" class="text-control" type="search"
+              placeholder="Cari kode, perangkat daerah, kegiatan..." autocomplete="off">
+            <button id="dynamic-search-button" class="button button-primary" type="submit">Cari</button>
+            <button id="dynamic-clear-search" class="button button-secondary" type="button" hidden>Hapus</button>
+            <button id="dynamic-export-excel" class="button button-export" type="button" disabled>Excel</button>
+            <button id="dynamic-export-pdf" class="button button-export" type="button" disabled
+              title="Buka dialog cetak; pilih Simpan sebagai PDF">PDF</button>
+          </form>
+        </div>
+        <div class="dynamic-budget-table-wrap">
+          <table class="dynamic-budget-table">
+            <thead id="dynamic-head"></thead>
+            <tbody id="dynamic-rows"></tbody>
+          </table>
+        </div>
+        <nav id="dynamic-pagination" class="pagination-controls" aria-label="Halaman dinamisasi anggaran" hidden>
+          <div class="page-navigation">
+            <span id="dynamic-page-indicator" class="helper-text"></span>
+            <button id="dynamic-previous" class="button button-secondary" type="button" disabled>
+              Sebelumnya
+            </button>
+            <button id="dynamic-next" class="button button-secondary" type="button" disabled>
+              Berikutnya
+            </button>
+          </div>
+        </nav>
+      </section>
+    </main>
+    <footer class="site-footer">Data anggaran Penetapan APBD</footer>
+  </body>
+</html>

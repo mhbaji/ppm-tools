@@ -1,0 +1,10 @@
+/.venv/
+/test/
+/data/
+__pycache__/
+
+*.pyc
+*.pyo
+*.pyd
+*.pycache
+*sqlite3
