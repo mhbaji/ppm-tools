@@ -291,12 +291,19 @@ class LinkCategory(Base):
             unique=True,
             sqlite_where=text("parent_id IS NOT NULL"),
         ),
+        Index(
+            "uq_link_categories_custom_alias",
+            text("lower(custom_alias)"),
+            unique=True,
+            sqlite_where=text("custom_alias IS NOT NULL"),
+        ),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(Text, nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False, default="")
     parent_id: Mapped[int | None] = mapped_column(ForeignKey("link_categories.id"))
+    custom_alias: Mapped[str | None] = mapped_column(Text)
     is_active: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=True, server_default=text("1")
     )
@@ -346,6 +353,78 @@ class DirectoryLink(Base):
     category: Mapped[LinkCategory] = relationship(back_populates="links")
     year: Mapped[Year | None] = relationship()
     creator: Mapped[AdminUser] = relationship()
+
+
+class RequestEvent(Base):
+    __tablename__ = "request_events"
+    __table_args__ = (
+        UniqueConstraint(
+            "event_type",
+            "route",
+            "resolution",
+            "bucket_start",
+            name="uq_request_events_bucket",
+        ),
+        Index(
+            "ix_request_events_resolution_time_type",
+            "resolution",
+            "bucket_start",
+            "event_type",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    event_type: Mapped[str] = mapped_column(Text, nullable=False)
+    route: Mapped[str] = mapped_column(Text, nullable=False)
+    resolution: Mapped[str] = mapped_column(Text, nullable=False)
+    bucket_start: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    request_count: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=1, server_default=text("1")
+    )
+
+
+class ShortLink(Base):
+    __tablename__ = "short_links"
+    __table_args__ = (
+        Index("uq_short_links_alias", "alias", unique=True),
+        Index("ix_short_links_created_at", "created_at"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    alias: Mapped[str] = mapped_column(Text, nullable=False)
+    title: Mapped[str] = mapped_column(Text, nullable=False)
+    target_url: Mapped[str] = mapped_column(Text, nullable=False)
+    is_active: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default=text("1")
+    )
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=datetime.now
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=datetime.now, onupdate=datetime.now
+    )
+
+
+class ShortLinkClick(Base):
+    __tablename__ = "short_link_clicks"
+    __table_args__ = (
+        UniqueConstraint(
+            "short_link_id",
+            "year",
+            name="uq_short_link_clicks_link_year",
+        ),
+        Index("ix_short_link_clicks_year", "year"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    short_link_id: Mapped[int] = mapped_column(
+        ForeignKey("short_links.id", ondelete="CASCADE"), nullable=False
+    )
+    year: Mapped[int] = mapped_column(Integer, nullable=False)
+    click_count: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=1, server_default=text("1")
+    )
 
 
 class BudgetDetail(YearMixin, Base):

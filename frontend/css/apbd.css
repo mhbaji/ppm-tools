@@ -1164,3 +1164,34 @@ td.numeric-cell { font-variant-numeric: tabular-nums; font-weight: 700; }
   .link-admin-tree-count { margin-left: auto; }
   .link-admin-tree-actions { margin-left: auto; }
 }
+
+.shortlink-page { max-width: 860px; }
+.shortlink-create-panel { display: grid; gap: 16px; }
+.shortlink-form { display: grid; gap: 18px; }
+.shortlink-form > label { display: grid; gap: 7px; color: #33445d; font-weight: 700; }
+.shortlink-form .helper-text { margin: 0; font-size: 12px; font-weight: 400; }
+.shortlink-input-prefix { color: var(--muted); font-size: 13px; font-weight: 500; }
+.shortlink-honeypot {
+  position: absolute !important;
+  left: -10000px !important;
+  width: 1px !important;
+  height: 1px !important;
+  overflow: hidden !important;
+}
+.shortlink-result {
+  padding: 16px;
+  border: 1px solid #b9ddc9;
+  border-radius: 10px;
+  background: #f0fbf4;
+}
+.shortlink-result h2 { margin-bottom: 8px; }
+.shortlink-result a { overflow-wrap: anywhere; font-weight: 700; }
+.link-hub-mode {
+  display: grid;
+  grid-template-columns: minmax(180px, 280px);
+  gap: 6px;
+  margin: 0 0 18px;
+}
+.link-hub-mode .field-label { margin: 0; }
+#link-directory-content[hidden],
+#public-shortlink-content[hidden] { display: none; }

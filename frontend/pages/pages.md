@@ -19,13 +19,20 @@
 - [x] Menampilkan capaian hanya pada level Program dan Sub Unit.
 
 ## Publik / Tautan
+- [x] `/tautan` dan `/shortlink` menyajikan halaman gabungan **Tautan dan Pendekin** dengan dropdown mode; URL lama memilih mode awal yang sesuai.
+- [x] Mode Shortlink tetap menggunakan token, waktu minimum, honeypot, dan proteksi pembuatan publik yang sama.
 - [x] Menampilkan topik utama, hingga lima topik rincian terbaru, serta tautan aktif.
 - [x] Menampilkan deskripsi, gambar, tag, dan tanggal publikasi.
 - [x] Menyediakan pencarian seluruh topik dan tautan aktif, dengan hasil yang menunjukkan hierarki topiknya.
 - [x] Menampilkan ringkasan topik utama, kartu subtopik, dan kartu tautan.
 - [x] Menampilkan tanggal publikasi di atas judul kartu tautan.
+- [x] Mendukung alias kustom topik pada URL `/t/<alias>`; URL alias lama `/tautan/<alias>` tetap berfungsi.
+- [x] Memakai nama topik utama/rincian sebagai judul, menampilkan breadcrumb klikabel `Tautan / Topik Utama / Topik Rincian`, serta membatasi ringkasan ke halaman awal semua topik utama.
 
 ## Admin / Tautan
+- [x] `/admin/tautan` dan `/admin/shortlinks` menyajikan halaman gabungan **Tautan dan Pendekin** dengan sidebar admin yang sama.
+- [x] Menyediakan dropdown untuk berpindah antara panel Tautan dan Shortlink tanpa menghilangkan sidebar.
+- [x] Form topik mewajibkan alias custom sebelum deskripsi; tidak ada pilihan tindak lanjut setelah topik disimpan. Shortlink tetap mandiri pada panelnya.
 - [x] Mengelola topik utama dan topik rincian.
 - [x] Mengelola tautan dengan status aktif/nonaktif dan batas hak edit/hapus berdasarkan pembuat.
 - [x] Menyediakan pencarian daftar topik dan tautan.
@@ -87,3 +94,25 @@
 - Dashboard Admin menampilkan realisasi anggaran dan persentase realisasi; metrik sub kegiatan belum ditagging tidak lagi ditampilkan.
 - Tabel Perangkat Daerah menggunakan lebar konten dan overflow horizontal pada viewport sempit.
 - Database default berada di `data/ppm_tools.sqlite3`. Saat pertama kali berpindah dari database lama, aplikasi menyalin datanya dan mempertahankan database asal sebagai cadangan; nama tabel dan kolom disimpan dalam bahasa Inggris.
+
+## Admin / Statistik Web dan API
+- [x] Menampilkan dua grafik terpisah untuk request halaman publik dan API publik.
+- [x] Menyediakan rentang 365, 30, dan 7 hari serta 24 jam dan 60 menit, dengan bucket UTC yang mencakup bucket terkini.
+- [x] Menampilkan total request dan 10 route teratas; halaman admin dan aset statis tidak dihitung sebagai halaman publik.
+- [x] Menyediakan status loading, error, dan data kosong serta melindungi API statistik dengan autentikasi admin.
+- [x] Menyimpan agregat request per menit/jam/hari dan membersihkan bucket lama; metrik adalah jumlah request, bukan pengunjung unik.
+
+## Publik / Shortlink
+- [x] Menyediakan form pembuatan tanpa login dengan URL tujuan, alias custom, judul, token bertanda tangan, waktu minimum, honeypot, dan batas per sesi.
+- [x] Membatasi URL tujuan pada HTTP/HTTPS, alias pada 3–63 karakter huruf kecil/angka/tanda hubung/garis bawah, serta menolak alias duplikat.
+- [x] Mengalihkan alias aktif melalui `/s/<alias>`, menolak alias nonaktif/tidak ditemukan, dan mengembalikan status kedaluwarsa secara eksplisit.
+- [x] Mencatat klik sebagai agregat per shortlink per tahun; setiap redirect valid dihitung termasuk kunjungan ulang/bot.
+- [x] Mengintegrasikan tautan Shortlink pada navigasi publik.
+
+## Admin / Shortlink
+- [x] Menampilkan jumlah total, aktif/nonaktif, serta jumlah dibuat/diklik dalam satu kartu untuk tiap kelompok tahun hingga sebelum N-2.
+- [x] Menyediakan form pembuatan shortlink admin di bawah ringkasan dan sebelum daftar, dengan validasi dan tautan hasil.
+- [x] Menyediakan pencarian URL panjang/alias/judul, pagination, jumlah klik, waktu dibuat/diupdate, dan aksi edit/hapus/aktif/nonaktif.
+- [x] Memungkinkan admin mengubah alias, judul, URL tujuan, dan masa berlaku; mutasi dilindungi autentikasi dan CSRF.
+- [x] Mengintegrasikan tautan ke navigasi admin serta mempertahankan tampilan tabel yang dapat digulir pada viewport sempit.
+- [x] Mempertahankan API, autentikasi/CSRF, dan pengelolaan Shortlink pada halaman admin gabungan.

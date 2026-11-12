@@ -9,3 +9,5 @@ __pycache__/
 *.pyd
 *.pycache
 *sqlite3
+*.md
+!README.md

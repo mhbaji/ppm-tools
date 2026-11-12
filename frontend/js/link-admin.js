@@ -1,6 +1,8 @@
+(() => {
 "use strict";
 
 const elements = {
+  adminMode: document.querySelector("#admin-link-mode"),
   status: document.querySelector("#link-admin-status"),
   login: document.querySelector("#link-admin-login"),
   retry: document.querySelector("#link-admin-retry"),
@@ -11,6 +13,7 @@ const elements = {
   categoryName: document.querySelector("#category-name"),
   categoryParent: document.querySelector("#category-parent"),
   categoryDescription: document.querySelector("#category-description"),
+  categoryAlias: document.querySelector("#category-custom-alias"),
   categoryCancel: document.querySelector("#category-cancel"),
   linkForm: document.querySelector("#link-form"),
   linkId: document.querySelector("#link-id"),
@@ -95,7 +98,7 @@ function showStatus(message, isError = false) {
 function setMutationEnabled(enabled) {
   state.mutationEnabled = enabled;
   document.querySelectorAll(
-    "#category-form button[type=submit], #link-form button[type=submit], #link-admin-directory button",
+    "#category-form button[type=submit], #category-custom-alias, #link-form button[type=submit], #link-admin-directory button",
   ).forEach((button) => { button.disabled = !enabled; });
 }
 
@@ -236,6 +239,7 @@ function editCategory(category) {
   elements.categoryName.value = category.name;
   elements.categoryParent.value = category.parent_id ? String(category.parent_id) : "";
   elements.categoryDescription.value = category.description;
+  elements.categoryAlias.value = category.custom_alias || "";
   elements.categoryCancel.hidden = false;
   elements.categoryName.focus();
 }
@@ -559,20 +563,27 @@ async function loadData() {
 
 async function refreshAfterMutation(message) {
   try {
-    if (await loadData()) showStatus(message);
+    if (await loadData()) {
+      showStatus(message);
+      return true;
+    }
+    return false;
   } catch (error) {
     showError(error, `${message} Data belum berhasil dimuat ulang. `, true);
+    return false;
   }
 }
 
 elements.categoryForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const id = elements.categoryId.value;
+  const isEditing = Boolean(id);
   const parentId = elements.categoryParent.value;
   const body = {
     name: elements.categoryName.value,
     description: elements.categoryDescription.value,
     parent_id: parentId ? Number(parentId) : null,
+    custom_alias: elements.categoryAlias.value.trim(),
   };
   try {
     await requestJson(
@@ -580,7 +591,7 @@ elements.categoryForm.addEventListener("submit", async (event) => {
       { method: id ? "PATCH" : "POST", body: JSON.stringify(body) },
     );
     resetCategoryForm();
-    await refreshAfterMutation("Topik berhasil disimpan.");
+    if (!await refreshAfterMutation("Topik berhasil disimpan.") || isEditing) return;
   } catch (error) {
     showError(error);
   }
@@ -634,6 +645,9 @@ elements.linkYear.addEventListener("change", () => {
   updateSelectionWarning();
 });
 elements.retry.addEventListener("click", () => { void initialize(); });
+elements.adminMode.addEventListener("change", () => {
+  if (elements.adminMode.value === "tautan") void initialize();
+});
 elements.searchForm.addEventListener("submit", (event) => {
   event.preventDefault();
   state.search = elements.search.value.trim();
@@ -669,4 +683,5 @@ async function initialize() {
   }
 }
 
-void initialize();
+if (elements.adminMode.value === "tautan") void initialize();
+})();

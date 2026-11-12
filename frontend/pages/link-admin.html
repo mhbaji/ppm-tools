@@ -3,114 +3,11 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="Pengelolaan topik dan tautan publik.">
-    <title>Kelola Tautan | PPM Tools</title>
-    <link rel="stylesheet" href="/css/apbd.css?v=29">
+    <meta http-equiv="refresh" content="0;url=/admin/tautan">
+    <link rel="canonical" href="/admin/tautan">
+    <title>Tautan dan Pendekin | PPM Tools</title>
   </head>
   <body>
-    <header class="site-header">
-      <a class="brand" href="/"><span class="brand-mark" aria-hidden="true">P</span><strong>PPM Tools</strong></a>
-      <nav class="public-navigation" aria-label="Navigasi admin">
-        <a class="button button-secondary" href="/admin/dashboard">Dashboard Admin</a>
-        <a class="button button-secondary" href="/tautan">Tautan Publik</a>
-        <a class="button button-secondary" href="/login">Admin</a>
-      </nav>
-    </header>
-    <main class="page-shell">
-      <section class="page-heading">
-        <h1>Kelola Tautan</h1>
-        <p id="link-admin-status" class="helper-text" role="status">Memeriksa sesi admin...</p>
-        <button id="link-admin-retry" class="button button-secondary" type="button" hidden>
-          Coba muat ulang data
-        </button>
-        <div id="link-admin-login" hidden>
-          <p>Login di tab baru, lalu kembali dan muat ulang data agar input yang belum disimpan tetap tersedia.</p>
-          <a class="button button-primary" href="/login" target="_blank" rel="noopener">Login admin</a>
-        </div>
-      </section>
-      <div id="link-admin-content" hidden>
-        <aside class="summary-panel link-admin-summary" aria-labelledby="link-admin-summary-title">
-          <div class="summary-heading">
-            <h2 id="link-admin-summary-title">Ringkasan Tautan</h2>
-          </div>
-          <p class="helper-text">Jumlah mencakup topik dan tautan aktif maupun nonaktif.</p>
-          <div id="link-admin-summary" class="summary-count-row" aria-live="polite"></div>
-        </aside>
-        <p id="link-admin-selection-warning" class="helper-text" role="status" hidden></p>
-        <div class="link-admin-columns">
-          <section class="panel link-admin-panel link-admin-category-panel">
-            <h2>Topik</h2>
-            <form id="category-form" class="link-admin-form link-admin-category-form">
-              <input id="category-id" type="hidden">
-              <label>Nama topik
-                <input id="category-name" class="text-control" required maxlength="200">
-              </label>
-              <label>Topik utama
-                <select id="category-parent" class="select-control"><option value="">Topik utama</option></select>
-              </label>
-              <label class="link-admin-category-description">Deskripsi
-                <textarea id="category-description" class="text-control" maxlength="1000"></textarea>
-              </label>
-              <button class="button button-primary" type="submit">Simpan topik</button>
-              <button id="category-cancel" class="button button-secondary" type="button" hidden>Batal</button>
-            </form>
-          </section>
-          <section class="panel link-admin-panel link-admin-links-panel">
-            <h2>Tautan</h2>
-            <p class="helper-text">Tautan baru nonaktif hingga admin mengaktifkannya. Waktu input dan update dicatat otomatis; edit/hapus hanya tersedia bagi pembuatnya.</p>
-            <p id="link-year-help" class="helper-text" hidden>Tambahkan tahun melalui pengelolaan tahun sebelum menyimpan tautan.</p>
-            <form id="link-form" class="link-admin-form">
-              <input id="link-id" type="hidden">
-              <label>Tahun
-                <select id="link-year" class="select-control" required>
-                  <option value="">Pilih tahun</option>
-                </select>
-              </label>
-              <label>Topik rincian
-                <select id="link-category" class="select-control" required></select>
-              </label>
-              <label>Judul
-                <input id="link-title" class="text-control" required maxlength="200">
-              </label>
-              <label>URL tautan
-                <input id="link-url" class="text-control" type="url" required>
-              </label>
-              <label>URL gambar (opsional)
-                <input id="link-image-url" class="text-control" type="url">
-              </label>
-              <label>Ikon (opsional)
-                <input id="link-icon" class="text-control" maxlength="40" placeholder="contoh: 📄">
-              </label>
-              <label>Deskripsi
-                <textarea id="link-description" class="text-control" maxlength="1000"></textarea>
-              </label>
-              <label>Tag (pisahkan dengan koma)
-                <input id="link-tags" class="text-control" placeholder="contoh: panduan, perencanaan">
-              </label>
-              <button class="button button-primary" type="submit">Simpan tautan</button>
-              <button id="link-cancel" class="button button-secondary" type="button" hidden>Batal</button>
-            </form>
-          </section>
-        </div>
-        <section class="panel link-admin-search-panel" aria-label="Pencarian data tautan">
-          <form id="link-admin-search-form" class="link-admin-search-form" role="search">
-            <label class="field-label" for="link-admin-search">Cari topik atau tautan</label>
-            <div class="link-admin-search-controls">
-              <input id="link-admin-search" class="text-control" type="search"
-                placeholder="Nama topik, judul, URL, deskripsi, atau tag" autocomplete="off">
-              <button class="button button-primary" type="submit">Cari</button>
-              <button id="link-admin-search-clear" class="button button-secondary" type="button" hidden>Hapus</button>
-            </div>
-            <p id="link-admin-search-status" class="helper-text" role="status"></p>
-          </form>
-        </section>
-        <section class="panel link-admin-directory-panel" aria-labelledby="link-admin-directory-title">
-          <h2 id="link-admin-directory-title">Daftar Topik dan Tautan</h2>
-          <p class="helper-text">Topik nonaktif dan isinya disembunyikan dari publik. Status masing-masing isi tidak berubah.</p>
-          <div id="link-admin-directory" class="link-admin-tree"></div>
-        </section>
-      </div>
-    </main>
-    <script src="/js/link-admin.js?v=7" defer></script>
+    <p>Halaman Tautan telah digabung. <a href="/admin/tautan">Buka pengelolaan Tautan dan Pendekin</a>.</p>
   </body>
 </html>

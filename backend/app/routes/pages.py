@@ -47,7 +47,18 @@ def pages_blueprint(frontend_dir: Path) -> Blueprint:
 
     @blueprint.get("/tautan")
     def public_link_directory_page():
-        """Serve the public link directory."""
+        """Serve the combined public link directory and shortlink page."""
+        return send_from_directory(pages_dir, "link-directory.html")
+
+    @blueprint.get("/t/<alias>")
+    @blueprint.get("/tautan/<alias>")
+    def public_link_directory_alias_page(alias: str):
+        """Serve the public directory page for a current or legacy topic alias."""
+        return send_from_directory(pages_dir, "link-directory.html")
+
+    @blueprint.get("/shortlink")
+    def public_shortlink_page():
+        """Serve the combined public link directory and shortlink page."""
         return send_from_directory(pages_dir, "link-directory.html")
 
     @blueprint.get("/perbandingan-anggaran")
@@ -69,6 +80,16 @@ def pages_blueprint(frontend_dir: Path) -> Blueprint:
     def admin_dashboard_page():
         """Serve the admin dashboard page."""
         return send_from_directory(pages_dir, "admin-dashboard.html")
+
+    @blueprint.get("/admin/statistics")
+    def admin_statistics_page():
+        """Serve the web and API statistics page."""
+        return send_from_directory(pages_dir, "web-api-statistics.html")
+
+    @blueprint.get("/admin/shortlinks")
+    def admin_shortlinks_page():
+        """Serve combined link and shortlink management for administrators."""
+        return send_from_directory(pages_dir, "shortlinks-admin.html")
 
     @blueprint.get("/admin/tagging-sub-kegiatan")
     def tagging_subactivity_page():
@@ -97,8 +118,8 @@ def pages_blueprint(frontend_dir: Path) -> Blueprint:
 
     @blueprint.get("/admin/tautan")
     def admin_link_directory_page():
-        """Serve link and topic management for administrators."""
-        return send_from_directory(pages_dir, "link-admin.html")
+        """Serve combined link and shortlink management for administrators."""
+        return send_from_directory(pages_dir, "shortlinks-admin.html")
 
     @blueprint.get("/admin/perangkat-daerah")
     def admin_department_page():

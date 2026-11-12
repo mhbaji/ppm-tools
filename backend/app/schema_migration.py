@@ -823,6 +823,15 @@ def migrate_link_directory_schema(database_path: Path) -> None:
                 connection.execute(
                     "ALTER TABLE link_categories ADD COLUMN is_active BOOLEAN NOT NULL DEFAULT 1"
                 )
+            if "custom_alias" not in category_columns:
+                connection.execute(
+                    "ALTER TABLE link_categories ADD COLUMN custom_alias TEXT"
+                )
+            connection.execute(
+                "CREATE UNIQUE INDEX IF NOT EXISTS uq_link_categories_custom_alias "
+                "ON link_categories (lower(custom_alias)) "
+                "WHERE custom_alias IS NOT NULL"
+            )
         table_exists = connection.execute(
             "SELECT 1 FROM sqlite_master WHERE type='table' AND name='directory_links'"
         ).fetchone()

@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Pengelolaan tautan dan shortlink publik.">
+    <title>Tautan dan Pendekin | PPM Tools</title>
+    <link rel="stylesheet" href="/css/apbd.css?v=32">
+    <link rel="stylesheet" href="/css/admin.css?v=30">
+    <script src="/js/link-admin.js?v=10" defer></script>
+    <script src="/js/shortlinks-admin.js?v=6" defer></script>
+  </head>
+  <body class="admin-page">
+    <aside class="admin-sidebar">
+      <a class="brand" href="/" aria-label="PPM Tools">
+        <span class="brand-mark" aria-hidden="true">P</span>
+        <span><strong>PPM Tools</strong><small>Panel admin</small></span>
+      </a>
+      <nav class="admin-navigation" aria-label="Navigasi admin">
+        <a href="/admin/dashboard">Dashboard</a>
+        <a href="/admin/statistics">Statistik Web dan API</a>
+        <a href="/admin/tautan" aria-current="page">Tautan dan Pendekin</a>
+        <a href="/admin/sub-kegiatan">Sub Kegiatan</a>
+        <a href="/admin/realisasi">Realisasi Anggaran dan Kinerja</a>
+        <a href="/admin/tagging-sub-kegiatan">Tagging Sub Kegiatan</a>
+        <a href="/admin/tahapan">Jenis Tagging dan Tahapan</a>
+        <a href="/admin/perangkat-daerah">Perangkat Daerah</a>
+        <a href="/admin/level-pekerjaan">Level Pekerjaan</a>
+        <a href="/admin/referensi">Indikator dan Satuan</a>
+      </nav>
+      <button id="logout-button" class="button button-secondary logout-button" type="button">Keluar</button>
+    </aside>
+    <main class="admin-main">
+      <header class="admin-heading">
+        <div>
+          <p class="eyebrow">PENGELOLAAN PUBLIK</p>
+          <h1>Tautan dan Pendekin</h1>
+          <p id="shortlinks-identity" class="helper-text"></p>
+        </div>
+      </header>
+      <div class="link-hub-mode">
+        <label class="field-label" for="admin-link-mode">Pilih jenis tautan</label>
+        <select id="admin-link-mode" class="select-control">
+          <option value="tautan">Tautan</option>
+          <option value="shortlink">Shortlink</option>
+        </select>
+      </div>
+      <div class="link-shortlinks-admin-grid">
+        <section id="admin-link-panel" class="link-shortlinks-admin-panel" aria-labelledby="link-admin-section-title">
+          <h2 id="link-admin-section-title">Tautan</h2>
+          <p id="link-admin-status" class="form-status" role="status" aria-live="polite">
+            Memeriksa sesi admin...
+          </p>
+          <button id="link-admin-retry" class="button button-secondary" type="button" hidden>
+            Coba muat ulang data tautan
+          </button>
+          <div id="link-admin-login" hidden>
+            <p>Sesi admin belum aktif. Login, lalu muat ulang data tautan.</p>
+            <a class="button button-primary" href="/login">Login admin</a>
+          </div>
+          <div id="link-admin-content" hidden>
+            <aside class="summary-panel link-admin-summary" aria-labelledby="link-admin-summary-title">
+              <div class="summary-heading">
+                <h3 id="link-admin-summary-title">Ringkasan Tautan</h3>
+              </div>
+              <p class="helper-text">Jumlah mencakup topik dan tautan aktif maupun nonaktif.</p>
+              <div id="link-admin-summary" class="summary-count-row" aria-live="polite"></div>
+            </aside>
+            <p id="link-admin-selection-warning" class="helper-text" role="status" hidden></p>
+            <div class="link-admin-columns">
+              <section class="panel link-admin-panel link-admin-category-panel">
+                <h3>Topik</h3>
+                <form id="category-form" class="link-admin-form link-admin-category-form">
+                  <input id="category-id" type="hidden">
+                  <label>Nama topik
+                    <input id="category-name" class="text-control" required maxlength="200">
+                  </label>
+                  <label>Topik utama
+                    <select id="category-parent" class="select-control"><option value="">Topik utama</option></select>
+                  </label>
+                  <label class="link-admin-category-description">
+                    Alias custom
+                    <span class="shortlink-input-prefix">/t/</span>
+                    <input id="category-custom-alias" class="text-control" required minlength="3" maxlength="63"
+                      pattern="[a-z0-9][a-z0-9_\-]{2,62}" autocomplete="off"
+                      aria-describedby="category-custom-alias-help">
+                    <small id="category-custom-alias-help" class="helper-text">
+                      3–63 karakter: huruf kecil, angka, tanda hubung, atau garis bawah.
+                    </small>
+                  </label>
+                  <label class="link-admin-category-description">Deskripsi
+                    <textarea id="category-description" class="text-control" maxlength="1000"></textarea>
+                  </label>
+                  <button class="button button-primary" type="submit">Simpan topik</button>
+                  <button id="category-cancel" class="button button-secondary" type="button" hidden>Batal</button>
+                </form>
+              </section>
+              <section class="panel link-admin-panel link-admin-links-panel">
+                <h3>Tautan kustom</h3>
+                <p class="helper-text">Tautan baru nonaktif hingga admin mengaktifkannya. Waktu input dan update dicatat otomatis; edit/hapus hanya tersedia bagi pembuatnya.</p>
+                <p id="link-year-help" class="helper-text" hidden>Tambahkan tahun melalui pengelolaan tahun sebelum menyimpan tautan.</p>
+                <form id="link-form" class="link-admin-form">
+                  <input id="link-id" type="hidden">
+                  <label>Tahun
+                    <select id="link-year" class="select-control" required>
+                      <option value="">Pilih tahun</option>
+                    </select>
+                  </label>
+                  <label>Topik rincian
+                    <select id="link-category" class="select-control" required></select>
+                  </label>
+                  <label>Judul
+                    <input id="link-title" class="text-control" required maxlength="200">
+                  </label>
+                  <label>URL tautan
+                    <input id="link-url" class="text-control" type="url" required>
+                  </label>
+                  <label>URL gambar (opsional)
+                    <input id="link-image-url" class="text-control" type="url">
+                  </label>
+                  <label>Ikon (opsional)
+                    <input id="link-icon" class="text-control" maxlength="40" placeholder="contoh: 📄">
+                  </label>
+                  <label>Deskripsi
+                    <textarea id="link-description" class="text-control" maxlength="1000"></textarea>
+                  </label>
+                  <label>Tag (pisahkan dengan koma)
+                    <input id="link-tags" class="text-control" placeholder="contoh: panduan, perencanaan">
+                  </label>
+                  <button class="button button-primary" type="submit">Simpan tautan</button>
+                  <button id="link-cancel" class="button button-secondary" type="button" hidden>Batal</button>
+                </form>
+              </section>
+            </div>
+            <section class="panel link-admin-search-panel" aria-label="Pencarian data tautan">
+              <form id="link-admin-search-form" class="link-admin-search-form" role="search">
+                <label class="field-label" for="link-admin-search">Cari topik atau tautan</label>
+                <div class="link-admin-search-controls">
+                  <input id="link-admin-search" class="text-control" type="search"
+                    placeholder="Nama topik, judul, URL, deskripsi, atau tag" autocomplete="off">
+                  <button class="button button-primary" type="submit">Cari</button>
+                  <button id="link-admin-search-clear" class="button button-secondary" type="button" hidden>Hapus</button>
+                </div>
+                <p id="link-admin-search-status" class="helper-text" role="status"></p>
+              </form>
+            </section>
+            <section class="panel link-admin-directory-panel" aria-labelledby="link-admin-directory-title">
+              <h3 id="link-admin-directory-title">Daftar Topik dan Tautan</h3>
+              <p class="helper-text">Topik nonaktif dan isinya disembunyikan dari publik. Status masing-masing isi tidak berubah.</p>
+              <div id="link-admin-directory" class="link-admin-tree"></div>
+            </section>
+          </div>
+        </section>
+        <section id="admin-shortlinks-panel" class="link-shortlinks-admin-panel" aria-labelledby="shortlinks-section-title" hidden>
+          <h2 id="shortlinks-section-title">Shortlink</h2>
+          <p id="shortlinks-status" class="form-status" role="status" aria-live="polite">
+            Memeriksa sesi admin...
+          </p>
+          <section class="summary-panel shortlinks-summary-panel" aria-labelledby="shortlinks-summary-title">
+            <div class="summary-heading">
+              <h3 id="shortlinks-summary-title">Ringkasan Shortlink</h3>
+            </div>
+            <div id="shortlinks-summary" aria-live="polite"></div>
+          </section>
+          <section class="panel shortlinks-create-panel" aria-labelledby="shortlinks-create-title">
+            <h3 id="shortlinks-create-title">Buat shortlink</h3>
+            <form id="shortlinks-create-form" class="shortlinks-create-form">
+              <label for="shortlinks-create-target">URL panjang
+                <input id="shortlinks-create-target" class="text-control" type="url" required maxlength="2048"
+                  placeholder="https://contoh.go.id/dokumen">
+              </label>
+              <label for="shortlinks-create-alias">Alias custom
+                <span class="shortlink-input-prefix">/s/</span>
+                <input id="shortlinks-create-alias" class="text-control" required minlength="3" maxlength="63"
+                  pattern="[a-z0-9][a-z0-9_\-]{2,62}" autocomplete="off">
+              </label>
+              <label for="shortlinks-create-title-input">Judul shortlink
+                <input id="shortlinks-create-title-input" class="text-control" required maxlength="200">
+              </label>
+              <label for="shortlinks-create-expiry">Masa berlaku (opsional)
+                <input id="shortlinks-create-expiry" class="text-control" type="datetime-local">
+              </label>
+              <div class="shortlinks-form-actions">
+                <button id="shortlinks-create-submit" class="button button-primary" type="submit">
+                  Buat shortlink
+                </button>
+                <button id="shortlinks-create-cancel" class="button button-secondary" type="button" hidden>
+                  Batal
+                </button>
+              </div>
+            </form>
+            <p id="shortlinks-create-result" class="shortlink-result" role="status" aria-live="polite" hidden>
+              <span id="shortlinks-create-result-label">Shortlink berhasil dibuat:</span>
+              <a id="shortlinks-create-result-link" href=""></a>
+            </p>
+          </section>
+          <section class="panel shortlinks-list-panel" aria-labelledby="shortlinks-list-title">
+            <h3 id="shortlinks-list-title">Daftar shortlink</h3>
+            <form id="shortlinks-search-form" class="shortlinks-search-form" role="search">
+              <label class="field-label" for="shortlinks-search">Cari URL panjang, alias, atau judul</label>
+              <div class="shortlinks-search-controls">
+                <input id="shortlinks-search" class="text-control" type="search" autocomplete="off">
+                <button class="button button-primary" type="submit">Cari</button>
+                <button id="shortlinks-search-clear" class="button button-secondary" type="button" hidden>Hapus</button>
+              </div>
+            </form>
+            <div class="table-scroll shortlinks-table-wrap">
+              <table class="data-table shortlinks-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Judul / Alias</th>
+                    <th scope="col">URL panjang</th>
+                    <th scope="col">Klik</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Masa berlaku</th>
+                    <th scope="col">Dibuat pada</th>
+                    <th scope="col">Diupdate pada</th>
+                    <th scope="col">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="shortlinks-table-body"></tbody>
+              </table>
+            </div>
+            <nav id="shortlinks-pagination" class="pagination-controls" aria-label="Halaman daftar shortlink" hidden>
+              <span id="shortlinks-page-indicator" class="helper-text"></span>
+              <div class="page-navigation">
+                <button id="shortlinks-previous" class="button button-secondary" type="button">Sebelumnya</button>
+                <button id="shortlinks-next" class="button button-secondary" type="button">Berikutnya</button>
+              </div>
+            </nav>
+          </section>
+        </section>
+      </div>
+    </main>
+  </body>
+</html>

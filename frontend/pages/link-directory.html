@@ -3,10 +3,11 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="Jelajahi dan cari tautan publik berdasarkan topik.">
-    <title>Tautan | PPM Tools</title>
-    <link rel="stylesheet" href="/css/apbd.css?v=28">
-    <script src="/js/link-directory.js?v=7" defer></script>
+    <meta name="description" content="Jelajahi tautan dan buat shortlink publik.">
+    <title>Tautan dan Pendekin | PPM Tools</title>
+    <link rel="stylesheet" href="/css/apbd.css?v=32">
+    <script src="/js/link-directory.js?v=11" defer></script>
+    <script src="/js/shortlink.js?v=2" defer></script>
   </head>
   <body>
     <header class="site-header">
@@ -18,42 +19,89 @@
         <a class="button button-secondary" href="/">Dashboard</a>
         <a class="button button-secondary" href="/tagging">Tagging</a>
         <a class="button button-secondary" href="/realisasi">Realisasi dan Capaian</a>
-        <a class="button button-secondary" href="/tautan" aria-current="page">Tautan</a>
+        <a class="button button-secondary" href="/tautan" data-link-hub>Tautan dan Pendekin</a>
         <a class="button button-secondary" href="/perbandingan-anggaran">Perbandingan Anggaran</a>
         <a class="button button-secondary" href="/login">Admin</a>
       </nav>
     </header>
-    <main class="page-shell">
-      <section class="page-heading">
-        <p class="link-breadcrumb"><span id="link-breadcrumb"></span></p>
-        <h1 id="link-page-title">Topik dan Tautan</h1>
-        <p id="link-page-description" class="page-description"></p>
-        <aside id="link-summary-panel" class="summary-panel link-summary-panel"
-          aria-labelledby="link-summary-title" hidden>
-          <div class="summary-heading">
-            <h2 id="link-summary-title">Ringkasan Tautan</h2>
+    <main class="page-shell link-hub-page">
+      <div class="link-hub-mode">
+        <label class="field-label" for="link-mode-select">Pilih tampilan</label>
+        <select id="link-mode-select" class="select-control">
+          <option value="/tautan">Tautan</option>
+          <option value="/shortlink">Shortlink</option>
+        </select>
+      </div>
+      <section id="link-directory-content">
+        <section class="page-heading">
+          <p class="link-breadcrumb"><span id="link-breadcrumb"></span></p>
+          <h1 id="link-page-title">Topik dan Tautan</h1>
+          <p id="link-page-description" class="page-description"></p>
+          <aside id="link-summary-panel" class="summary-panel link-summary-panel"
+            aria-labelledby="link-summary-title" hidden>
+            <div class="summary-heading">
+              <h2 id="link-summary-title">Ringkasan Tautan</h2>
+            </div>
+            <div id="link-summary" class="summary-count-row" aria-live="polite"></div>
+          </aside>
+          <form id="link-search-form" class="search-form link-search-form" role="search">
+            <label class="visually-hidden" for="link-search">Cari tautan</label>
+            <input id="link-search" class="text-control" type="search"
+              placeholder="Cari topik, judul, deskripsi, atau tag" autocomplete="off">
+            <button class="button button-primary" type="submit">Cari</button>
+            <button id="link-search-clear" class="button button-secondary" type="button" hidden>Hapus</button>
+          </form>
+          <p id="link-directory-status" class="helper-text" role="status">Memuat tautan...</p>
+        </section>
+        <section id="link-topics" class="link-topic-grid" aria-label="Daftar topik"></section>
+        <section id="link-cards" class="link-card-grid" aria-label="Daftar tautan"></section>
+        <nav id="link-pagination" class="pagination-controls" aria-label="Halaman daftar tautan" hidden>
+          <span id="link-page-indicator" class="helper-text"></span>
+          <div class="page-navigation">
+            <button id="link-previous" class="button button-secondary" type="button" disabled>Sebelumnya</button>
+            <button id="link-next" class="button button-secondary" type="button" disabled>Berikutnya</button>
           </div>
-          <div id="link-summary" class="summary-count-row" aria-live="polite"></div>
-        </aside>
-        <form id="link-search-form" class="search-form link-search-form" role="search">
-          <label class="visually-hidden" for="link-search">Cari tautan</label>
-          <input id="link-search" class="text-control" type="search"
-            placeholder="Cari topik, judul, deskripsi, atau tag" autocomplete="off">
-          <button class="button button-primary" type="submit">Cari</button>
-          <button id="link-search-clear" class="button button-secondary" type="button" hidden>Hapus</button>
-        </form>
-        <p id="link-directory-status" class="helper-text" role="status">Memuat tautan...</p>
+        </nav>
       </section>
-      <section id="link-topics" class="link-topic-grid" aria-label="Daftar topik"></section>
-      <section id="link-cards" class="link-card-grid" aria-label="Daftar tautan"></section>
-      <nav id="link-pagination" class="pagination-controls" aria-label="Halaman daftar tautan" hidden>
-        <span id="link-page-indicator" class="helper-text"></span>
-        <div class="page-navigation">
-          <button id="link-previous" class="button button-secondary" type="button" disabled>Sebelumnya</button>
-          <button id="link-next" class="button button-secondary" type="button" disabled>Berikutnya</button>
+      <section id="public-shortlink-content" class="panel shortlink-create-panel" aria-labelledby="shortlink-form-title" hidden>
+        <div class="page-heading">
+          <h1>Buat Shortlink</h1>
+          <p class="page-description">Masukkan URL tujuan, alias yang mudah diingat, dan judul.</p>
         </div>
-      </nav>
+        <h2 id="shortlink-form-title">Shortlink baru</h2>
+        <p id="shortlink-status" class="helper-text" role="status" aria-live="polite">
+          Menyiapkan pemeriksaan form...
+        </p>
+        <form id="shortlink-form" class="shortlink-form">
+          <label for="shortlink-target">URL panjang
+            <input id="shortlink-target" class="text-control" type="url" required maxlength="2048"
+              placeholder="https://contoh.go.id/dokumen">
+          </label>
+          <label for="shortlink-alias">Alias custom
+            <span class="shortlink-input-prefix">/s/</span>
+            <input id="shortlink-alias" class="text-control" required minlength="3" maxlength="63"
+              pattern="[a-z0-9][a-z0-9_\-]{2,62}" autocomplete="off"
+              aria-describedby="shortlink-alias-help">
+            <small id="shortlink-alias-help" class="helper-text">
+              3–63 karakter: huruf kecil, angka, tanda hubung, atau garis bawah.
+            </small>
+          </label>
+          <label for="shortlink-title">Judul shortlink
+            <input id="shortlink-title" class="text-control" required maxlength="200">
+          </label>
+          <label class="shortlink-honeypot" aria-hidden="true">Jangan isi kolom ini
+            <input id="shortlink-website" type="text" tabindex="-1" autocomplete="off">
+          </label>
+          <button id="shortlink-submit" class="button button-primary" type="submit" disabled>
+            Buat shortlink
+          </button>
+        </form>
+        <section id="shortlink-result" class="shortlink-result" aria-live="polite" hidden>
+          <h2>Shortlink berhasil dibuat</h2>
+          <a id="shortlink-result-link" href=""></a>
+        </section>
+      </section>
     </main>
-    <footer class="site-footer">Tautan publik PPM Tools</footer>
+    <footer class="site-footer">Tautan dan Pendekin publik PPM Tools</footer>
   </body>
 </html>

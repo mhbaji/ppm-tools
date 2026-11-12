@@ -12,15 +12,29 @@ from .public_helpers import (
 from .admin_helpers import _realization_statement, _serialize_realization_rows
 
 from collections import defaultdict
+from datetime import datetime, timezone
 from io import BytesIO
+import hmac
 import json
+import secrets
+import time
 from typing import Any
 from urllib.parse import quote, unquote
 
-from flask import Blueprint, jsonify, request, send_file
+from flask import (
+    Blueprint,
+    jsonify,
+    redirect,
+    request,
+    send_file,
+    session as web_session,
+)
 from openpyxl import Workbook
 from sqlalchemy import and_, case, func, or_, select, tuple_
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import aliased
+from itsdangerous import BadSignature, SignatureExpired
 
 from ..models import (
     BudgetDetail,
@@ -41,6 +55,8 @@ from ..models import (
     SubactivityTagging,
     Stage,
     PerformanceTarget,
+    ShortLink,
+    ShortLinkClick,
     Year,
     DirectoryLink,
     LinkCategory,
@@ -54,9 +70,161 @@ from .common import (
     requested_stage_id,
     requested_year,
 )
+from .shortlink_helpers import (
+    SHORTLINK_ALIAS_PATTERN,
+    parse_shortlink_expiry,
+    shortlink_form_serializer,
+    shortlink_json,
+    valid_shortlink_url,
+)
 
 
 public_blueprint = Blueprint("public_api", __name__, url_prefix="/api")
+shortlink_redirect_blueprint = Blueprint("shortlink_redirect", __name__)
+
+SHORTLINK_CREATION_LIMIT = 10
+SHORTLINK_CREATION_WINDOW_SECONDS = 3600
+SHORTLINK_MIN_FORM_AGE_SECONDS = 2
+
+
+def _shortlink_timestamp() -> int:
+    """Return the current epoch time for form timing and rate checks."""
+    return int(time.time())
+
+
+@public_blueprint.get("/shortlinks/form-token")
+def get_shortlink_form_token():
+    """Issue a short-lived, session-bound anti-bot token for the public form."""
+    nonce = secrets.token_urlsafe(24)
+    web_session["shortlink_form_nonce"] = nonce
+    token = shortlink_form_serializer().dumps(
+        {"nonce": nonce, "issued_at": _shortlink_timestamp()}
+    )
+    return jsonify({"form_token": token})
+
+
+@public_blueprint.post("/shortlinks")
+def create_public_shortlink():
+    """Create a public shortlink after server-side validation and bot checks."""
+    body = request.get_json(silent=True)
+    if not isinstance(body, dict):
+        raise APIError(400, "Data shortlink tidak valid.")
+    if body.get("website"):
+        raise APIError(400, "Permintaan tidak dapat diproses.")
+    token = body.get("form_token")
+    if not isinstance(token, str) or not token:
+        raise APIError(400, "Pemeriksaan anti-bot tidak valid. Muat ulang form.")
+    try:
+        token_data = shortlink_form_serializer().loads(token, max_age=3600)
+    except (BadSignature, SignatureExpired) as error:
+        raise APIError(400, "Pemeriksaan anti-bot kedaluwarsa. Muat ulang form.") from error
+    nonce = web_session.get("shortlink_form_nonce", "")
+    if (
+        not isinstance(token_data, dict)
+        or not isinstance(token_data.get("nonce"), str)
+        or not isinstance(nonce, str)
+        or not hmac.compare_digest(token_data["nonce"], nonce)
+    ):
+        raise APIError(400, "Pemeriksaan anti-bot tidak valid. Muat ulang form.")
+    issued_at = token_data.get("issued_at")
+    now_seconds = _shortlink_timestamp()
+    if (
+        not isinstance(issued_at, int)
+        or now_seconds - issued_at < SHORTLINK_MIN_FORM_AGE_SECONDS
+        or issued_at > now_seconds
+    ):
+        raise APIError(400, "Tunggu sebentar sebelum mengirim form.")
+
+    timestamps = web_session.get("shortlink_creation_timestamps", [])
+    if not isinstance(timestamps, list):
+        timestamps = []
+    recent_timestamps = [
+        value
+        for value in timestamps
+        if isinstance(value, int)
+        and now_seconds - SHORTLINK_CREATION_WINDOW_SECONDS < value <= now_seconds
+    ]
+    if len(recent_timestamps) >= SHORTLINK_CREATION_LIMIT:
+        raise APIError(429, "Batas pembuatan shortlink tercapai. Coba lagi nanti.")
+
+    alias = body.get("alias")
+    title = body.get("title")
+    target_url = body.get("target_url")
+    if (
+        not isinstance(alias, str)
+        or not SHORTLINK_ALIAS_PATTERN.fullmatch(alias)
+    ):
+        raise APIError(
+            400,
+            "Alias harus 3–63 karakter: huruf kecil, angka, tanda hubung, atau garis bawah.",
+        )
+    if not isinstance(title, str) or not title.strip() or len(title.strip()) > 200:
+        raise APIError(400, "Judul wajib diisi (maksimal 200 karakter).")
+    if not valid_shortlink_url(target_url):
+        raise APIError(400, "URL tujuan harus menggunakan HTTP atau HTTPS.")
+    try:
+        expires_at = parse_shortlink_expiry(body.get("expires_at"))
+    except ValueError as error:
+        raise APIError(400, str(error)) from error
+
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    with get_session() as database_session:
+        with database_session.begin():
+            item = ShortLink(
+                alias=alias,
+                title=title.strip(),
+                target_url=target_url.strip(),
+                is_active=True,
+                expires_at=expires_at,
+                created_at=now,
+                updated_at=now,
+            )
+            database_session.add(item)
+            try:
+                database_session.flush()
+            except IntegrityError as error:
+                raise APIError(409, "Alias shortlink tersebut sudah digunakan.") from error
+            result = shortlink_json(item)
+
+    web_session.pop("shortlink_form_nonce", None)
+    web_session["shortlink_creation_timestamps"] = [
+        *recent_timestamps,
+        now_seconds,
+    ]
+    return jsonify({"created": True, "shortlink": result}), 201
+
+
+@shortlink_redirect_blueprint.get("/s/<alias>")
+def redirect_shortlink(alias: str):
+    """Redirect an active, unexpired alias and record its click atomically."""
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    with get_session() as database_session:
+        with database_session.begin():
+            item = database_session.scalar(
+                select(ShortLink).where(ShortLink.alias == alias)
+            )
+            if item is None or not item.is_active:
+                raise APIError(404, "Shortlink tidak ditemukan.")
+            if item.expires_at is not None and item.expires_at <= now:
+                raise APIError(410, "Shortlink sudah kedaluwarsa.")
+            target_url = item.target_url
+            statement = sqlite_insert(ShortLinkClick).values(
+                short_link_id=item.id,
+                year=now.year,
+                click_count=1,
+            )
+            database_session.execute(
+                statement.on_conflict_do_update(
+                    index_elements=[
+                        ShortLinkClick.short_link_id,
+                        ShortLinkClick.year,
+                    ],
+                    set_={"click_count": ShortLinkClick.click_count + 1},
+                )
+            )
+    response = redirect(target_url, code=302)
+    response.headers["Cache-Control"] = "no-store"
+    return response
 
 
 @public_blueprint.get("/years")
@@ -152,7 +320,12 @@ def get_public_link_directory():
     """Return active links grouped by their two-level public topic hierarchy."""
     category_value = request.args.get("category_id", "")
     topic_value = request.args.get("topic_id", "")
+    alias_value = request.args.get("alias", "")
     search = request.args.get("q", "").strip()
+    if alias_value and (category_value or topic_value):
+        raise APIError(400, "Alias tidak dapat digabungkan dengan category_id atau topic_id.")
+    if alias_value and not SHORTLINK_ALIAS_PATTERN.fullmatch(alias_value):
+        raise APIError(400, "Parameter alias tidak valid.")
     try:
         limit = int(request.args.get("limit", "50"))
         offset = int(request.args.get("offset", "0"))
@@ -189,6 +362,23 @@ def get_public_link_directory():
             )
             or 0,
         }
+        if alias_value:
+            category = session.scalar(
+                select(LinkCategory).where(LinkCategory.custom_alias == alias_value)
+            )
+            if (
+                category is None
+                or not category.is_active
+                or (
+                    category.parent_id is not None
+                    and (category.parent is None or not category.parent.is_active)
+                )
+            ):
+                raise APIError(404, "Topik tidak ditemukan.")
+            if category.parent_id is None:
+                topic_value = str(category.id)
+            else:
+                category_value = str(category.id)
         if category_value:
             if not category_value.isdecimal():
                 raise APIError(400, "Parameter category_id tidak valid.")
@@ -229,6 +419,12 @@ def get_public_link_directory():
                         "name": category.name,
                         "description": category.description,
                         "parent_id": category.parent_id,
+                        "custom_alias": category.custom_alias,
+                        "parent": {
+                            "id": category.parent.id,
+                            "name": category.parent.name,
+                            "custom_alias": category.parent.custom_alias,
+                        },
                     },
                     "links": [
                         {
@@ -262,16 +458,21 @@ def get_public_link_directory():
                     or_(LinkCategory.parent_id.is_(None), root_category.is_active.is_(True)),
                 )
             )
+            selected_topic = None
             if topic_value:
                 if not topic_value.isdecimal():
                     raise APIError(400, "Parameter topic_id tidak valid.")
-                topic = session.get(LinkCategory, int(topic_value))
-                if topic is None or topic.parent_id is not None or not topic.is_active:
+                selected_topic = session.get(LinkCategory, int(topic_value))
+                if (
+                    selected_topic is None
+                    or selected_topic.parent_id is not None
+                    or not selected_topic.is_active
+                ):
                     raise APIError(404, "Topik utama tidak ditemukan.")
                 statement = statement.where(
                     or_(
-                        LinkCategory.id == topic.id,
-                        LinkCategory.parent_id == topic.id,
+                        LinkCategory.id == selected_topic.id,
+                        LinkCategory.parent_id == selected_topic.id,
                     )
                 )
             pattern = f"%{escape_like(search)}%"
@@ -312,10 +513,12 @@ def get_public_link_directory():
                             "category": {
                                 "id": category.id,
                                 "name": category.name,
+                                "custom_alias": category.custom_alias,
                             },
                             "topic": {
                                 "id": (root or category).id,
                                 "name": (root or category).name,
+                                "custom_alias": (root or category).custom_alias,
                             },
                         }
                         for link, category, root in matches
@@ -324,6 +527,17 @@ def get_public_link_directory():
                     "limit": limit,
                     "offset": offset,
                     "summary": summary,
+                    **(
+                        {
+                            "selected_topic": {
+                                "id": selected_topic.id,
+                                "name": selected_topic.name,
+                                "custom_alias": selected_topic.custom_alias,
+                            }
+                        }
+                        if selected_topic is not None
+                        else {}
+                    ),
                 }
             )
 
@@ -399,6 +613,7 @@ def get_public_link_directory():
                         "id": child.id,
                         "name": child.name,
                         "description": child.description,
+                        "custom_alias": child.custom_alias,
                         "created_at": child.created_at.isoformat(sep=" "),
                         "links": [
                             {
@@ -420,6 +635,7 @@ def get_public_link_directory():
                     "id": root.id,
                     "name": root.name,
                     "description": root.description,
+                    "custom_alias": root.custom_alias,
                     "created_at": root.created_at.isoformat(sep=" "),
                     "subtopics": subtopics,
                 }

@@ -20,7 +20,7 @@ from .admin_helpers import (
 import secrets
 import json
 from collections import defaultdict
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from urllib.parse import urlsplit
 from uuid import uuid4
@@ -33,8 +33,8 @@ from flask import (
     send_from_directory,
     session as web_session,
 )
-from sqlalchemy import delete, exists, func, or_, select, text
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy import case, delete, exists, func, or_, select, text
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import selectinload
 from werkzeug.security import check_password_hash
 from werkzeug.utils import secure_filename
@@ -66,6 +66,9 @@ from ..models import (
     OrganizationalUnit,
     SubactivityTagging,
     PerformanceTarget,
+    RequestEvent,
+    ShortLink,
+    ShortLinkClick,
     Year,
     DirectoryLink,
     LinkCategory,
@@ -79,9 +82,432 @@ from .common import (
     requested_stage_id,
     requested_year,
 )
+from .shortlink_helpers import (
+    SHORTLINK_ALIAS_PATTERN,
+    parse_shortlink_expiry,
+    shortlink_json,
+    valid_shortlink_url,
+)
 
 
 admin_blueprint = Blueprint("admin_api", __name__, url_prefix="/api")
+
+STATISTICS_PERIODS = {
+    "year": ("day", "%Y-%m-%d", 365),
+    "month": ("day", "%Y-%m-%d", 30),
+    "week": ("day", "%Y-%m-%d", 7),
+    "day": ("hour", "%Y-%m-%dT%H", 24),
+    "hour": ("minute", "%Y-%m-%dT%H:%M", 60),
+}
+
+
+def _statistics_bucket_start(value: datetime, resolution: str) -> datetime:
+    """Round a UTC timestamp down to the requested reporting interval."""
+    if resolution == "minute":
+        return value.replace(second=0, microsecond=0)
+    if resolution == "hour":
+        return value.replace(minute=0, second=0, microsecond=0)
+    return value.replace(hour=0, minute=0, second=0, microsecond=0)
+
+
+def _statistics_interval(resolution: str) -> timedelta:
+    """Return the duration of one statistics bucket."""
+    return {
+        "minute": timedelta(minutes=1),
+        "hour": timedelta(hours=1),
+        "day": timedelta(days=1),
+    }[resolution]
+
+
+@admin_blueprint.get("/admin/statistics")
+@admin_required
+def get_admin_statistics():
+    """Aggregate public page and API requests for a rolling time window."""
+    period = request.args.get("period", "")
+    if period not in STATISTICS_PERIODS:
+        raise APIError(400, "Periode statistik tidak valid.")
+
+    resolution, bucket_format, bucket_count = STATISTICS_PERIODS[period]
+    until = datetime.now(timezone.utc).replace(tzinfo=None)
+    bucket_end = _statistics_bucket_start(until, resolution)
+    interval = _statistics_interval(resolution)
+    since = bucket_end - interval * (bucket_count - 1)
+    buckets = []
+    current = since
+    while len(buckets) < bucket_count:
+        buckets.append(current.strftime(bucket_format))
+        current += interval
+
+    reports = {}
+    with get_session() as database_session:
+        for event_type in ("web", "api"):
+            bucket_column = func.strftime(
+                bucket_format, RequestEvent.bucket_start
+            ).label("bucket")
+            bucket_rows = database_session.execute(
+                select(bucket_column, func.sum(RequestEvent.request_count))
+                .where(
+                    RequestEvent.event_type == event_type,
+                    RequestEvent.resolution == resolution,
+                    RequestEvent.bucket_start >= since,
+                    RequestEvent.bucket_start <= bucket_end,
+                )
+                .group_by(bucket_column)
+                .order_by(bucket_column)
+            ).all()
+            counts_by_bucket = {
+                bucket: count for bucket, count in bucket_rows if bucket is not None
+            }
+            top_rows = database_session.execute(
+                select(
+                    RequestEvent.route,
+                    func.sum(RequestEvent.request_count).label("count"),
+                )
+                .where(
+                    RequestEvent.event_type == event_type,
+                    RequestEvent.resolution == resolution,
+                    RequestEvent.bucket_start >= since,
+                    RequestEvent.bucket_start <= bucket_end,
+                )
+                .group_by(RequestEvent.route)
+                .order_by(
+                    func.sum(RequestEvent.request_count).desc(),
+                    RequestEvent.route,
+                )
+                .limit(10)
+            ).all()
+            reports[event_type] = {
+                "total": sum(counts_by_bucket.values()),
+                "series": [
+                    {"bucket": bucket, "count": counts_by_bucket.get(bucket, 0)}
+                    for bucket in buckets
+                ],
+                "top_routes": [
+                    {"route": route, "count": count} for route, count in top_rows
+                ],
+            }
+
+    return jsonify(
+        {
+            "period": period,
+            "timezone": "UTC",
+            "since": since.isoformat(sep=" "),
+            "until": until.isoformat(sep=" "),
+            "resolution": resolution,
+            "web": reports["web"],
+            "api": reports["api"],
+        }
+    )
+
+
+def _shortlink_year_counts(database_session, timestamp_column, model, year: int) -> dict:
+    """Aggregate a timestamp column into the four requested calendar-year buckets."""
+    current_start = datetime(year, 1, 1)
+    previous_start = datetime(year - 1, 1, 1)
+    older_start = datetime(year - 2, 1, 1)
+    counts = database_session.execute(
+        select(
+            func.sum(
+                case(
+                    (timestamp_column >= current_start, 1),
+                    else_=0,
+                )
+            ).label("this_year"),
+            func.sum(
+                case(
+                    (
+                        (timestamp_column >= previous_start)
+                        & (timestamp_column < current_start),
+                        1,
+                    ),
+                    else_=0,
+                )
+            ).label("year_minus_1"),
+            func.sum(
+                case(
+                    (
+                        (timestamp_column >= older_start)
+                        & (timestamp_column < previous_start),
+                        1,
+                    ),
+                    else_=0,
+                )
+            ).label("year_minus_2"),
+            func.sum(
+                case((timestamp_column < older_start, 1), else_=0)
+            ).label("before_year_minus_2"),
+        )
+        .select_from(model)
+    ).one()
+    return {
+        "this_year": counts.this_year or 0,
+        "year_minus_1": counts.year_minus_1 or 0,
+        "year_minus_2": counts.year_minus_2 or 0,
+        "before_year_minus_2": counts.before_year_minus_2 or 0,
+    }
+
+
+def _shortlink_click_year_counts(database_session, year: int) -> dict:
+    """Sum yearly click counters into the requested four calendar buckets."""
+    counts = database_session.execute(
+        select(
+            func.sum(
+                case(
+                    (ShortLinkClick.year == year, ShortLinkClick.click_count),
+                    else_=0,
+                )
+            ).label("this_year"),
+            func.sum(
+                case(
+                    (
+                        ShortLinkClick.year == year - 1,
+                        ShortLinkClick.click_count,
+                    ),
+                    else_=0,
+                )
+            ).label("year_minus_1"),
+            func.sum(
+                case(
+                    (
+                        ShortLinkClick.year == year - 2,
+                        ShortLinkClick.click_count,
+                    ),
+                    else_=0,
+                )
+            ).label("year_minus_2"),
+            func.sum(
+                case(
+                    (
+                        ShortLinkClick.year < year - 2,
+                        ShortLinkClick.click_count,
+                    ),
+                    else_=0,
+                )
+            ).label("before_year_minus_2"),
+        )
+        .select_from(ShortLinkClick)
+    ).one()
+    return {
+        "this_year": counts.this_year or 0,
+        "year_minus_1": counts.year_minus_1 or 0,
+        "year_minus_2": counts.year_minus_2 or 0,
+        "before_year_minus_2": counts.before_year_minus_2 or 0,
+    }
+
+
+@admin_blueprint.get("/admin/shortlinks/summary")
+@admin_required
+def get_admin_shortlink_summary():
+    """Return shortlink status counts and creation/click totals by calendar year."""
+    year = datetime.now(timezone.utc).year
+    with get_session() as database_session:
+        counts = database_session.execute(
+            select(
+                func.count().label("total"),
+                func.sum(case((ShortLink.is_active.is_(True), 1), else_=0)).label(
+                    "active"
+                ),
+                func.sum(case((ShortLink.is_active.is_(False), 1), else_=0)).label(
+                    "inactive"
+                ),
+            )
+        ).one()
+        created = _shortlink_year_counts(
+            database_session, ShortLink.created_at, ShortLink, year
+        )
+        clicks = _shortlink_click_year_counts(database_session, year)
+    return jsonify(
+        {
+            "year": year,
+            "total": counts.total or 0,
+            "active": counts.active or 0,
+            "inactive": counts.inactive or 0,
+            "created": created,
+            "clicks": clicks,
+        }
+    )
+
+
+@admin_blueprint.get("/admin/shortlinks")
+@admin_required
+def get_admin_shortlinks():
+    """Search and paginate shortlinks with their click totals."""
+    search = request.args.get("q", "").strip()
+    try:
+        limit = int(request.args.get("limit", "25"))
+        offset = int(request.args.get("offset", "0"))
+    except ValueError as error:
+        raise APIError(400, "Limit dan offset harus berupa bilangan bulat.") from error
+    if not 1 <= limit <= 100 or offset < 0:
+        raise APIError(400, "Limit harus 1–100 dan offset tidak boleh negatif.")
+
+    filters = []
+    if search:
+        pattern = f"%{escape_like(search)}%"
+        filters.append(
+            or_(
+                ShortLink.alias.ilike(pattern, escape="\\"),
+                ShortLink.title.ilike(pattern, escape="\\"),
+                ShortLink.target_url.ilike(pattern, escape="\\"),
+            )
+        )
+    click_counts = (
+        select(
+            ShortLinkClick.short_link_id.label("short_link_id"),
+            func.sum(ShortLinkClick.click_count).label("click_count"),
+        )
+        .group_by(ShortLinkClick.short_link_id)
+        .subquery()
+    )
+    with get_session() as database_session:
+        total = database_session.scalar(
+            select(func.count()).select_from(ShortLink).where(*filters)
+        ) or 0
+        rows = database_session.execute(
+            select(ShortLink, func.coalesce(click_counts.c.click_count, 0))
+            .outerjoin(click_counts, click_counts.c.short_link_id == ShortLink.id)
+            .where(*filters)
+            .order_by(ShortLink.created_at.desc(), ShortLink.id.desc())
+            .limit(limit)
+            .offset(offset)
+        ).all()
+    return jsonify(
+        {
+            "total": total,
+            "limit": limit,
+            "offset": offset,
+            "items": [shortlink_json(link, clicks) for link, clicks in rows],
+        }
+    )
+
+
+@admin_blueprint.post("/admin/shortlinks")
+@admin_required
+def create_admin_shortlink():
+    """Create a shortlink from the authenticated admin page."""
+    body = request.get_json(silent=True)
+    if not isinstance(body, dict):
+        raise APIError(400, "Data shortlink tidak valid.")
+
+    alias = body.get("alias")
+    title = body.get("title")
+    target_url = body.get("target_url")
+    if not isinstance(alias, str) or not SHORTLINK_ALIAS_PATTERN.fullmatch(alias):
+        raise APIError(400, "Alias shortlink tidak valid.")
+    if not isinstance(title, str) or not title.strip() or len(title.strip()) > 200:
+        raise APIError(400, "Judul wajib diisi (maksimal 200 karakter).")
+    if not valid_shortlink_url(target_url):
+        raise APIError(400, "URL tujuan harus menggunakan HTTP atau HTTPS.")
+    try:
+        expires_at = parse_shortlink_expiry(body.get("expires_at"))
+    except ValueError as error:
+        raise APIError(400, str(error)) from error
+
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    with get_session() as database_session:
+        with database_session.begin():
+            item = ShortLink(
+                alias=alias,
+                title=title.strip(),
+                target_url=target_url.strip(),
+                is_active=True,
+                expires_at=expires_at,
+                created_at=now,
+                updated_at=now,
+            )
+            database_session.add(item)
+            try:
+                database_session.flush()
+            except IntegrityError as error:
+                raise APIError(409, "Alias shortlink tersebut sudah digunakan.") from error
+            result = shortlink_json(item)
+    return jsonify({"created": True, "shortlink": result}), 201
+
+
+@admin_blueprint.patch("/admin/shortlinks/<int:shortlink_id>")
+@admin_required
+def update_admin_shortlink(shortlink_id: int):
+    """Edit a shortlink's alias, title, destination, or expiration time."""
+    body = request.get_json(silent=True)
+    if not isinstance(body, dict):
+        raise APIError(400, "Data shortlink tidak valid.")
+    with get_session() as database_session:
+        with database_session.begin():
+            item = database_session.get(ShortLink, shortlink_id)
+            if item is None:
+                raise APIError(404, "Shortlink tidak ditemukan.")
+            alias = body.get("alias", item.alias)
+            title = body.get("title", item.title)
+            target_url = body.get("target_url", item.target_url)
+            if (
+                not isinstance(alias, str)
+                or not SHORTLINK_ALIAS_PATTERN.fullmatch(alias)
+            ):
+                raise APIError(400, "Alias shortlink tidak valid.")
+            if not isinstance(title, str) or not title.strip() or len(title.strip()) > 200:
+                raise APIError(400, "Judul wajib diisi (maksimal 200 karakter).")
+            if not valid_shortlink_url(target_url):
+                raise APIError(400, "URL tujuan harus menggunakan HTTP atau HTTPS.")
+            if "expires_at" in body:
+                try:
+                    expires_at = parse_shortlink_expiry(body["expires_at"])
+                except ValueError as error:
+                    raise APIError(400, str(error)) from error
+                item.expires_at = expires_at
+            duplicate = database_session.scalar(
+                select(ShortLink.id).where(
+                    ShortLink.alias == alias,
+                    ShortLink.id != shortlink_id,
+                )
+            )
+            if duplicate is not None:
+                raise APIError(409, "Alias shortlink tersebut sudah digunakan.")
+            item.alias = alias
+            item.title = title.strip()
+            item.target_url = target_url.strip()
+            item.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
+            try:
+                database_session.flush()
+            except IntegrityError as error:
+                raise APIError(409, "Alias shortlink tersebut sudah digunakan.") from error
+            result = shortlink_json(item)
+    return jsonify({"updated": True, "shortlink": result})
+
+
+@admin_blueprint.patch("/admin/shortlinks/<int:shortlink_id>/status")
+@admin_required
+def update_admin_shortlink_status(shortlink_id: int):
+    """Enable or disable a shortlink."""
+    body = request.get_json(silent=True)
+    is_active = body.get("is_active") if isinstance(body, dict) else None
+    if not isinstance(is_active, bool):
+        raise APIError(400, "Status harus aktif atau nonaktif.")
+    with get_session() as database_session:
+        with database_session.begin():
+            item = database_session.get(ShortLink, shortlink_id)
+            if item is None:
+                raise APIError(404, "Shortlink tidak ditemukan.")
+            item.is_active = is_active
+            item.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
+    return jsonify({"updated": True, "id": shortlink_id, "is_active": is_active})
+
+
+@admin_blueprint.delete("/admin/shortlinks/<int:shortlink_id>")
+@admin_required
+def delete_admin_shortlink(shortlink_id: int):
+    """Permanently remove a shortlink and its click history."""
+    with get_session() as database_session:
+        with database_session.begin():
+            item = database_session.get(ShortLink, shortlink_id)
+            if item is None:
+                raise APIError(404, "Shortlink tidak ditemukan.")
+            database_session.execute(
+                delete(ShortLinkClick).where(
+                    ShortLinkClick.short_link_id == shortlink_id
+                )
+            )
+            database_session.delete(item)
+    return jsonify({"deleted": True, "id": shortlink_id})
 
 
 @admin_blueprint.get("/admin/uploads")
@@ -1820,6 +2246,7 @@ def _link_category_json(category: LinkCategory) -> dict:
         "name": category.name,
         "description": category.description,
         "parent_id": category.parent_id,
+        "custom_alias": category.custom_alias,
         "is_active": category.is_active,
         "created_at": category.created_at.isoformat(sep=" "),
     }
@@ -1862,6 +2289,15 @@ def _valid_external_url(value: object, *, optional: bool = False) -> bool:
         return False
 
 
+def _category_custom_alias(value: object) -> str:
+    if not isinstance(value, str) or not SHORTLINK_ALIAS_PATTERN.fullmatch(value):
+        raise APIError(
+            400,
+            "Alias custom wajib 3–63 karakter: huruf kecil, angka, tanda hubung, atau garis bawah.",
+        )
+    return value
+
+
 def _link_tags(value: object) -> list[str] | None:
     if not isinstance(value, list) or len(value) > 12:
         return None
@@ -1892,6 +2328,7 @@ def create_admin_link_category():
         raise APIError(400, "Nama topik wajib diisi (maksimal 200 karakter).")
     description = body.get("description", "")
     parent_id = body.get("parent_id")
+    custom_alias = _category_custom_alias(body.get("custom_alias"))
     if not isinstance(description, str) or len(description) > 1000:
         raise APIError(400, "Deskripsi topik maksimal 1000 karakter.")
     if parent_id is not None and (
@@ -1911,13 +2348,26 @@ def create_admin_link_category():
             )
             if duplicate is not None:
                 raise APIError(409, "Nama topik tersebut sudah tersedia.")
+            duplicate_alias = database_session.scalar(
+                select(LinkCategory.id).where(
+                    func.lower(LinkCategory.custom_alias) == custom_alias.lower()
+                )
+            )
+            if duplicate_alias is not None:
+                raise APIError(409, "Alias custom tersebut sudah digunakan.")
             item = LinkCategory(
                 name=body["name"].strip(),
                 description=description.strip(),
                 parent_id=parent_id,
+                custom_alias=custom_alias,
             )
             database_session.add(item)
-            database_session.flush()
+            try:
+                database_session.flush()
+            except IntegrityError as error:
+                raise APIError(
+                    409, "Nama topik atau alias custom sudah digunakan."
+                ) from error
             result = _link_category_json(item)
     return jsonify({"created": True, "category": result}), 201
 
@@ -1928,8 +2378,11 @@ def update_admin_link_category(category_id: int):
     body = request.get_json(silent=True)
     if not isinstance(body, dict) or not _valid_name(body.get("name")):
         raise APIError(400, "Nama topik wajib diisi (maksimal 200 karakter).")
+    if "custom_alias" not in body:
+        raise APIError(400, "Alias custom wajib diisi.")
     description = body.get("description", "")
     parent_id = body.get("parent_id")
+    custom_alias = _category_custom_alias(body.get("custom_alias"))
     if not isinstance(description, str) or len(description) > 1000:
         raise APIError(400, "Deskripsi topik maksimal 1000 karakter.")
     if parent_id is not None and (
@@ -1969,9 +2422,24 @@ def update_admin_link_category(category_id: int):
             )
             if duplicate is not None:
                 raise APIError(409, "Nama topik tersebut sudah tersedia.")
+            duplicate_alias = database_session.scalar(
+                select(LinkCategory.id).where(
+                    func.lower(LinkCategory.custom_alias) == custom_alias.lower(),
+                    LinkCategory.id != category_id,
+                )
+            )
+            if duplicate_alias is not None:
+                raise APIError(409, "Alias custom tersebut sudah digunakan.")
             item.name = body["name"].strip()
             item.description = description.strip()
             item.parent_id = parent_id
+            item.custom_alias = custom_alias
+            try:
+                database_session.flush()
+            except IntegrityError as error:
+                raise APIError(
+                    409, "Nama topik atau alias custom sudah digunakan."
+                ) from error
             result = _link_category_json(item)
     return jsonify({"updated": True, "category": result})
 
